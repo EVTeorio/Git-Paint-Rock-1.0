@@ -12,7 +12,7 @@ library(RStoolbox)
 library(hyperSpec)
 ###################### masking shadow pixels ######################################
 # Filter rows 
-filtered_data <- data_clean[data_clean$X790.821.nm >= 0.4, ]
+filtered_data <- data_clean[data_clean$X790.821.nm >= 0.3, ]
 
 write.csv(filtered_data,"C:/Users/PaintRock/Documents/Data processing/Hyperspectral/QGIS_masked.csv")
 

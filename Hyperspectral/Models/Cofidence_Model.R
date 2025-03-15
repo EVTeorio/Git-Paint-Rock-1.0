@@ -34,27 +34,47 @@ inTrain <- caret::createDataPartition(
 training <- spec_chem_canopy_n25[inTrain, ]
 testing <- spec_chem_canopy_n25[-inTrain, ]
 
-# Ranger models (Random Forest) with probability = TRUE
-n <- 1000  # Number of trees
-rf_mod <- ranger::ranger(as.formula(paste(className, "~ .")),
-                         data = training, 
-                         num.trees = n, 
-                         probability = TRUE)
-
-# Define a threshold for confidence (e.g., minimum probability for a prediction to be considered reliable)
-threshold <- 0.7  # This means predictions with a class probability below 0.7 will be set to NA
+# Train the random forest model with probability predictions
+rf_mod <- ranger::ranger(
+  as.formula(paste(className, "~ .")),
+  data = training, 
+  num.trees = 1000, 
+  probability = TRUE  # This enables prediction probabilities
+)
 
 # Make predictions on the test set
-predictions <- predict(rf_mod, data = testing, type = "response")
+response_predictions <- predict(rf_mod, data = testing, type = "response")
 
 # Extract the predicted class probabilities
-probabilities <- predictions$predictions
+probabilities <- response_predictions$predictions
 
 # For each prediction, check if the max class probability is above the threshold
 max_probs <- apply(probabilities, 1, max)
 
+
+
+#####################
 # Set predictions to NA where the confidence is below the threshold
-final_predictions <- ifelse(max_probs < threshold, NA, predictions$predictions)
+final_predictions <- ifelse(max_probs < threshold, NA, response_predictions$predictions)
+
+# Remove NA predictions (where confidence was below threshold)
+final_predictions_clean <- final_predictions[!is.na(final_predictions)]
+
+# Get the true values from the test set (SpeciesID)
+true_values <- testing$SpeciesID[!is.na(final_predictions)]
+
+# Ensure that both final_predictions_clean and true_values have the same levels
+# This is important to avoid the "more levels than the reference" issue
+final_predictions_clean <- factor(final_predictions_clean, levels = levels(true_values))
+true_values <- factor(true_values, levels = levels(true_values))
+
+# Create the confusion matrix
+conf_matrix <- confusionMatrix(final_predictions_clean, true_values)
+
+# Print the confusion matrix
+print(conf_matrix)
+
+
 
 ########################################
 

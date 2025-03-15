@@ -45,22 +45,40 @@ training <- spec_chem_canopy_n25[inTrain, ]
 
 testing <- spec_chem_canopy_n25[-inTrain, ]
 
-# Ranger models (Random Forest)
-n <- 1000  # Number of trees
-rf_mod <- ranger::ranger(as.formula(paste(className, "~ .")),
-                         data = training, num.trees = n)
-###################################
-# Make predictions on the test data
-rf_mod_pred <- predict(rf_mod, testing)
+# Train the random forest model with probability predictions
+rf_mod <- ranger::ranger(
+  as.formula(paste(className, "~ .")),
+  data = training, 
+  num.trees = 1000, 
+  probability = TRUE  # This enables prediction probabilities
+)
 
-# Extract predicted class labels
-predicted_classes <- rf_mod_pred$predictions
+# Predict on the testing data
+rf_pred_prob <- predict(rf_mod, data = testing)
+
+# Get the predicted probabilities (all classes) from the model
+predicted_probabilities <- rf_pred_prob$predictions  # A matrix of probabilities
+
+# Use `apply` and `which.max` to get the index of the class with the highest probability for each observation
+predicted_class_index <- apply(predicted_probabilities, 1, which.max)
+
+# Map these indices to the actual class labels (assuming columns of `predicted_probabilities` are the class labels)
+predicted_class <- colnames(predicted_probabilities)[predicted_class_index]
+
+# Extract the confidence (the highest probability for each prediction)
+confidence_values <- apply(predicted_probabilities, 1, max)
+
+# Combine predicted classes and their confidence values in a data frame for each sample
+results <- data.frame(
+  Predicted_Class = predicted_class,
+  Confidence = confidence_values
+)
 
 # Calculate overall accuracy
 actual_classes <- testing[[className]]
-accuracy <- sum(predicted_classes == actual_classes) / length(actual_classes)
+accuracy <- sum(predicted_class == actual_classes) / length(actual_classes)
 cat("Overall Accuracy: ", accuracy, "\n")
 
 # Create confusion matrix
-conf_matrix <- confusionMatrix(factor(predicted_classes), factor(actual_classes))
+conf_matrix <- caret::confusionMatrix(factor(predicted_class), factor(actual_classes))
 print(conf_matrix)

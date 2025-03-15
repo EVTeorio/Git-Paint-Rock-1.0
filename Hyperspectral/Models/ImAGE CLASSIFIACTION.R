@@ -1,17 +1,4 @@
 
-
-# Load necessary libraries for raster processing
-library(raster)
-library(ggplot2)
-library(lattice)
-library(ranger)
-library(caret)
-library(tidyverse)
-library(spectrolab)
-library(rasterVis)
-library(beepr)
-beep(3)
-
 # 1. Load the raster file (assuming you have a raster of spectral bands)
 img_path <- "E:/Hyperspec Images/raw_11892_rd_rf_or"
 img <- brick(img_path)
@@ -88,5 +75,4 @@ plot(confidence_raster,
 
 # Optionally, save the raster of predictions
 writeRaster(confidence_raster, filename = "E:/Git Paint Rock 1.0/Output/Cofidence_Distribution_Ratser.tif", format = "GTiff", overwrite = TRUE)
-
 
