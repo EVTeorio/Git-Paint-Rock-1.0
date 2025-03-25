@@ -1,5 +1,4 @@
 
-
 # Load necessary libraries for raster processing
 library(raster)
 library(ggplot2)
@@ -22,28 +21,31 @@ spectral_df <- as.data.frame(img, xy = TRUE)  # Convert to data frame, keeping X
 spectral_data <- spectral_df
 spectral_df <- justincase
 justincase <- spectral_df
-# Replicate the rows of spec_chem_canopy_n25 to match the number of rows in spectral_df
-spec_chem_canopy_n25_repeated <- spec_chem_canopy_n25[rep(1:nrow(spec_chem_canopy_n25), length.out = nrow(spectral_df)), ]
 
-# 4. Remove the 'x' and 'y' columns from the data (coordinates) since the model doesn't need them
-spectral_df <- spectral_data[, -(1:2)]  # Removing the 'x' and 'y' coordinates
+# Remove the 'x' and 'y' columns from the data (coordinates) since the model doesn't need them
+spectral_df <- spectral_df[, -(1:2)]  # Removing the 'x' and 'y' coordinates
 
 # Now insert the first 4 columns of the repeated spec_chem_canopy_n25 after the second column of spectral_df
 spectral_df <- cbind(spec_chem_canopy_n25_repeated[, 1:5], spectral_df[, 1:ncol(spectral_df)])
 
-# 5. Predict using the trained Random Forest model (with probability prediction enabled)
-rf_mod_pred <- predict(rf_mod, spectral_df, type = "response", probability = TRUE)
 
-# 6. Get the predicted probabilities (all classes) from the model
-predicted_probabilities <- rf_mod_pred$predictions  # A matrix of probabilities for each class
+#RF Model required for the following
+# Predict on the testing data
+# Replicate the rows of spec_chem_canopy_n25 to match the number of rows in spectral_df
+spec_chem_canopy_n25_repeated <- spec_chem_canopy_n25[rep(1:nrow(spec_chem_canopy_n25), length.out = nrow(spectral_df)), ]
 
-# 7. Use `apply` and `which.max` to get the index of the class with the highest probability for each observation
+rf_pred_prob <- predict(rf_mod, data = spectral_df)
+
+# Get the predicted probabilities (all classes) from the model
+predicted_probabilities <- rf_pred_prob$predictions  # A matrix of probabilities
+
+# Use `apply` and `which.max` to get the index of the class with the highest probability for each observation
 predicted_class_index <- apply(predicted_probabilities, 1, which.max)
 
 # Map these indices to the actual class labels (assuming columns of `predicted_probabilities` are the class labels)
 predicted_class <- colnames(predicted_probabilities)[predicted_class_index]
 
-# 8. Extract the confidence (the highest probability for each prediction)
+# Extract the confidence (the highest probability for each prediction)
 confidence_values <- apply(predicted_probabilities, 1, max)
 
 # 9. Apply threshold to mask or assign "UNKNOWN" if confidence is below a set threshold
@@ -61,7 +63,11 @@ spectral_df$predictions_numeric <- as.numeric(spectral_df$predictions)
 
 # Now create the raster from the numeric predictions
 predicted_raster <- rasterFromXYZ(spectral_df[, c("x", "y", "predictions_numeric")])
-plot(predicted_raster)
+# save the raster of predictions
+writeRaster(predicted_raster,
+            filename = "E:/Git Paint Rock 1.0/Output/prediction_raster.tif",
+            format = "GTiff", overwrite = TRUE)
+
 
 # Define the color palette: One color for each species
 category_colors <- rainbow(length(levels(spectral_df$predictions)))  # Or use other palettes, e.g., RColorBrewer::brewer.pal()
@@ -87,6 +93,5 @@ plot(confidence_raster,
      main = "Cofidence Distribution Map")
 
 # Optionally, save the raster of predictions
-writeRaster(confidence_raster, filename = "E:/Git Paint Rock 1.0/Output/Cofidence_Distribution_Ratser.tif", format = "GTiff", overwrite = TRUE)
-
-
+writeRaster(confidence_raster,
+            filename = "E:/Git Paint Rock 1.0/Output/Cofidence_Distribution_Ratser.tif", format = "GTiff", overwrite = TRUE)

@@ -49,8 +49,8 @@ for (i in 1:iterations) {
   # Train the random forest model with probability predictions
   rf_mod <- ranger::ranger(
     as.formula(paste(className, "~ .")),
-    data = training,
-    num.trees = 1000,
+    data = training, # designating training sample
+    num.trees = 1000, #Number of nodes used to make predictions
     probability = TRUE  # This enables prediction probabilities
   )
   

@@ -10,6 +10,7 @@ library(stringr)
 library(spectrolab)
 library(RStoolbox)
 library(hyperSpec)
+library(beepr)
 
 # Define the function to extract spectral values and metadata
 extract_spectral_data <- function(path) {
@@ -40,10 +41,10 @@ extract_spectral_data <- function(path) {
     
     # Extract tile number (assuming it's always the first part of the name)
     tile_number <- TrID[1]  # The first part before the first underscore is the tile number
-    species_id <- TrID[2]   # The second part is the SpeciesID
-    tree_id <- TrID[3]      # The third part is the TreeID
+    species_id <- TrID[3]   # The second part is the SpeciesID
+    tree_id <- TrID[2]      # The third part is the TreeID
     
-    # Convert to a data frame (add tile number, species ID, and tree ID as new columns)
+    # Convert to a data frame (Switched to fix labeling error)
     TrID_df <- data.frame(TileNumber = tile_number, SpeciesID = species_id, TreeID = tree_id)
     
     # Combine spectral data and metadata
@@ -57,17 +58,17 @@ extract_spectral_data <- function(path) {
   final_df <- do.call(rbind, all_spectral_data)
   
   # Write the combined data to a CSV file
-  write.csv(final_df, file.path("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Raw_PixelSpectra_Trial.csv"),
+  write.csv(final_df, file.path("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/NewCanopiesMD_Raw.csv"),
             row.names = FALSE)
   
   return(final_df)
 }
 
 # Set the directory path
-path <- "C:/Users/PaintRock/Documents/Data processing/Hyperspectral/canopy_spectra/Canopy_Rasters/"
+path <- "E:/Git Paint Rock 1.0/Hyperspectral/New_Canopy_Rasters/"
 
 # Call the function to process the data and save it as CSV (this takes a while)
 spectral_df <- extract_spectral_data(path)
-
+beep(3)
 
 

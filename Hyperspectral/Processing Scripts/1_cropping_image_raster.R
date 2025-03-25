@@ -5,7 +5,7 @@ library(sf)
 
 # Define file paths
 HSI_dir <- "E:/HSI_Files_Parsing"  # Directory containing hyperspectral images
-canopies_path <- "C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Labeling/Label Shapefiles"  # Path to shapefiles
+canopies_path <- "E:/Git Paint Rock 1.0/Hyperspectral/Updated Canopy Polygons"  # Path to shapefiles
 
 # List all files in the hyperspectral image directory (without extensions)
 allfiles <- list.files(HSI_dir)
@@ -77,7 +77,7 @@ lapply(matched_files, function(img_number) {
     names(tst_mask) <- tst_names
     
     # Generate the output filename using the modified polygon name
-    output_filename <- paste0("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/canopy_spectra/Canopy_Rasters/", polygon_name, ".ENVI")
+    output_filename <- paste0("E:/Git Paint Rock 1.0/Hyperspectral/New_Canopy_Rasters/", polygon_name, ".ENVI")
     
     # Save the masked raster to a file
     writeRaster(tst_mask, output_filename, overwrite = TRUE)

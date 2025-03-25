@@ -7,7 +7,7 @@ library(beepr)
 
 
 # Read in data
-spec_chem_canopy <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Outliers_Removed.csv")
+spec_chem_canopy <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/NewCanopiesMD_Clean.csv")
 colnames(spec_chem_canopy)
 
 # Set seed for stable cal/val split
@@ -79,6 +79,10 @@ actual_classes <- testing[[className]]
 accuracy <- sum(predicted_class == actual_classes) / length(actual_classes)
 cat("Overall Accuracy: ", accuracy, "\n")
 
-# Create confusion matrix
-conf_matrix <- caret::confusionMatrix(factor(predicted_class), factor(actual_classes))
+
+# Ensure that both predicted and actual classes are factors with the same levels
+predicted_class <- factor(predicted_class, levels = levels(actual_classes))
+actual_classes <- factor(actual_classes, levels = levels(predicted_class))
+
+conf_matrix <- caret::confusionMatrix(predicted_class, actual_classes)
 print(conf_matrix)
