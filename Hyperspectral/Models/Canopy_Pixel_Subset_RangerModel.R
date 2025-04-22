@@ -1,25 +1,5 @@
-
-library(dplyr)
-library(tidyr)
-library(ranger)
-library(caret)
-library(beepr)
-beep()
-
-# Read in data
-spec_chem_canopy <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/NewCanopiesMD_Sunlit.csv")
-colnames(spec_chem_canopy)
-spec_chem_canopy <- mean_vegetation_indices
-###########QA/QC
-# Filter rows 
-#spec_chem_canopy <- spectral_df
-#unique(Subset_Data$TileNumber)
-
-#Subset_Data <- spec_chem_canopy
-
-#spec_chem_canopy <- Subset_Data[Subset_Data$TileNumber == 32619, ]
-######################
-
+beep(3)
+spec_chem_canopy <- MD_spectra
 
 
 # Set seed for stable cal/val split
@@ -28,34 +8,49 @@ set.seed(1234)
 # Set the response variable for modeling
 className <- "SpeciesID"  # Adjust this variable as per the required response
 
-# Filter data to include rows with the response variable (SpeciesID) Change datset here
+# Filter data to include rows with the response variable (SpeciesID), and remove rows where TreeID is "not sampled"
 spec_chem_canopy_n25 <- spec_chem_canopy[!is.na(spec_chem_canopy[[className]]), ] %>%
   subset(TreeID != "not sampled") %>%
   mutate(SpeciesID = as.factor(SpeciesID),
          TreeID = as.factor(TreeID)) %>%
   group_by(TileNumber, TreeID, SpeciesID) %>%
-  slice_sample(n = 33, replace = FALSE)
+  slice_sample(n = 50, replace = FALSE)
 
-# Display counts for each group (e.g., Site, TreeID, SpeciesID)
-spec_chem_canopy_n25 %>%
-  group_by(TileNumber, TreeID, SpeciesID, eval(parse(text = className))) %>%
-  tally() %>%
-  print(n = 100)
+# Remove SpeciesID with only one unique TreeID before the Cal/Val split
+spec_chem_canopy_n25_filtered <- spec_chem_canopy_n25 %>%
+  group_by(SpeciesID) %>%
+  filter(n_distinct(TreeID) > 1) %>%
+  ungroup()
 
-# Check unique values of the response variable
-unique(spec_chem_canopy_n25[[className]])
+# Check unique values of the response variable after filtering
+unique(spec_chem_canopy_n25_filtered[[className]])
 
-# Create a test and train split
+# Create the stratified split using caret's createDataPartition
+# This will split the data while maintaining the SpeciesID and TreeID groupings
 inTrain <- caret::createDataPartition(
-  y = spec_chem_canopy_n25[[className]],
-  p = 0.7,
+  y = spec_chem_canopy_n25_filtered$SpeciesID, 
+  p = 0.5, 
   list = FALSE
 )
 
-# Training and testing data subsets (only using TreeID and SpeciesID)
-training <- spec_chem_canopy_n25[inTrain, ]
+# Split the data into training and testing sets
+training <- spec_chem_canopy_n25_filtered[inTrain, ]
+testing <- spec_chem_canopy_n25_filtered[-inTrain, ]
 
-testing <- spec_chem_canopy_n25[-inTrain, ]
+# Check the number of TreeIDs included in the training and testing sets per SpeciesID
+training_treeids_count <- training %>%
+  group_by(SpeciesID) %>%
+  summarise(Num_TreeIDs_Train = n_distinct(TreeID))
+
+testing_treeids_count <- testing %>%
+  group_by(SpeciesID) %>%
+  summarise(Num_TreeIDs_Test = n_distinct(TreeID))
+
+# Merge the counts to show both training and testing counts
+treeids_count_summary <- left_join(training_treeids_count, testing_treeids_count, by = "SpeciesID")
+
+# Display the summary of TreeID counts per SpeciesID
+print(treeids_count_summary)
 
 # Train the random forest model with probability predictions
 rf_mod <- ranger::ranger(
@@ -92,18 +87,3 @@ accuracy <- sum(predicted_class == actual_classes) / length(actual_classes)
 cat("Overall Accuracy: ", accuracy, "\n")
 
 
-# Ensure that both predicted and actual classes are factors with the same levels
-predicted_class <- factor(predicted_class, levels = levels(actual_classes))
-actual_classes <- factor(actual_classes, levels = levels(predicted_class))
-
-conf_matrix <- caret::confusionMatrix(predicted_class, actual_classes)
-print(conf_matrix)
-
-# Extract per-class accuracy
-class_accuracy <- conf_matrix$byClass[, "Balanced Accuracy"]
-
-# Print the per-class accuracy for each tree species
-cat("\nPer-Class Accuracy:\n")
-for (species in names(class_accuracy)) {
-  cat(species, ": ", class_accuracy[species], "\n")
-}

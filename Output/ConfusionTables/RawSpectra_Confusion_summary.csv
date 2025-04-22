@@ -1,0 +1,8 @@
+"","conf_matrix$overall"
+"Accuracy",0.310586734693878
+"Kappa",0.24488681641864
+"AccuracyLower",0.300352048669632
+"AccuracyUpper",0.320962398689544
+"AccuracyNull",0.153061224489796
+"AccuracyPValue",8.91098186186629e-268
+"McnemarPValue",NA

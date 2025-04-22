@@ -58,14 +58,14 @@ extract_spectral_data <- function(path) {
   final_df <- do.call(rbind, all_spectral_data)
   
   # Write the combined data to a CSV file
-  write.csv(final_df, file.path("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/NewCanopiesMD_Raw.csv"),
+  write.csv(final_df, file.path("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Raw_Spectra.csv"),
             row.names = FALSE)
   
   return(final_df)
 }
 
 # Set the directory path
-path <- "E:/Git Paint Rock 1.0/Hyperspectral/New_Canopy_Rasters/"
+path <- "E:/Git Paint Rock 1.0/Hyperspectral/MD_Canopy_Rasters/"
 
 # Call the function to process the data and save it as CSV (this takes a while)
 spectral_df <- extract_spectral_data(path)

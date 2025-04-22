@@ -10,14 +10,16 @@ library(stringr)
 library(spectrolab)
 library(RStoolbox)
 library(hyperSpec)
+beep()
 ###################### masking shadow pixels ######################################
+data_clean <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Raw_Spectra.csv")
 # Filter rows 
 filtered_data <- data_clean[data_clean$X790.821.nm >= 0.3, ]
 
-write.csv(filtered_data,"C:/Users/PaintRock/Documents/Data processing/Hyperspectral/NewCanopiesMD_Sunlit.csv")
+write.csv(filtered_data,"C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Sunlit_Pixels.csv")
 
 ############################ Resampling ###########################################
-df <- filtered_data
+df <- data_clean
 
 # Store non-spectral columns
 non_spectral_columns <- df[, c("TileNumber", "SpeciesID", "TreeID")]
@@ -33,5 +35,5 @@ df_resampled <- cbind(non_spectral_columns, df_resampled)
 #Remove sample_name column
 df_resampled <- df_resampled[, !colnames(df_resampled) %in% "sample_name"]
 
-write.csv(df_resampled,"C:/Users/PaintRock/Documents/Data processing/Hyperspectral/QGIS_masked_5nm.csv")
+write.csv(df_resampled,"C:/Users/PaintRock/Documents/Data processing/Hyperspectral/5nm_WithShadows.csv")
 

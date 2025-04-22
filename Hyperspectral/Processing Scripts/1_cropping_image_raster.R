@@ -2,10 +2,11 @@
 library(terra)
 library(raster)
 library(sf)
+beep(3)
 
 # Define file paths
 HSI_dir <- "E:/HSI_Files_Parsing"  # Directory containing hyperspectral images
-canopies_path <- "E:/Git Paint Rock 1.0/Hyperspectral/Updated Canopy Polygons"  # Path to shapefiles
+canopies_path <- "E:/Git Paint Rock 1.0/Hyperspectral/Updated Canopy Polygons/"  # Path to shapefiles
 
 # List all files in the hyperspectral image directory (without extensions)
 allfiles <- list.files(HSI_dir)
@@ -91,3 +92,4 @@ lapply(matched_files, function(img_number) {
   rm(tst_img, tst_quads)
   gc()
 })
+
