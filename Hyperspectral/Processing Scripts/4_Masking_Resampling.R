@@ -10,6 +10,7 @@ library(stringr)
 library(spectrolab)
 library(RStoolbox)
 library(hyperSpec)
+library(beepr)
 beep()
 ###################### masking shadow pixels ######################################
 data_clean <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Raw_Spectra.csv")

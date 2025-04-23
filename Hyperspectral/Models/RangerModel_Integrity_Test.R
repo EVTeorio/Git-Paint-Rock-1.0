@@ -11,19 +11,11 @@ library(beepr)
 spec_chem_canopy <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/QGIS_masked.csv")
 colnames(spec_chem_canopy)
 
-# Set seed for stable cal/val split
+# Set seed for reproducibility
 set.seed(1234)
 
 # Set the response variable for modeling
-className <- "SpeciesID"  # Adjust this variable as per the required response
-
-# Filter data to include rows with the response variable (SpeciesID)
-spec_chem_canopy_n25 <- spec_chem_canopy[!is.na(spec_chem_canopy[[className]]), ] %>%
-  subset(TreeID != "not sampled") %>%
-  mutate(SpeciesID = as.factor(SpeciesID),
-         TreeID = as.factor(TreeID)) %>%
-  group_by(TileNumber, TreeID, SpeciesID) %>%
-  slice_sample(n = 80, replace = FALSE)
+className <- "SpeciesID"
 
 # Prepare for 100 iterations of bootstrapping
 iterations <- 100
@@ -32,53 +24,67 @@ results <- data.frame(Iteration = integer(),
                       Sensitivity = numeric(),
                       Specificity = numeric())
 
-# Loop to run the model 100 times with bootstrapped training data
+# Loop for bootstrapping iterations
 for (i in 1:iterations) {
   
-  # Create a random split for training and testing data each iteration
-  inTrain <- caret::createDataPartition(
-    y = spec_chem_canopy_n25[[className]],
-    p = 0.7,
-    list = FALSE
-  )
+  # Step 1: Canopy-level dataframe
+  canopies <- spec_chem_canopy %>%
+    group_by(TreeID) %>%
+    slice(1) %>%
+    ungroup() %>%
+    select(TreeID, SpeciesID)
   
-  # Training and testing data subsets
-  training <- spec_chem_canopy_n25[inTrain, ]
-  testing <- spec_chem_canopy_n25[-inTrain, ]
+  # Step 2: Filter out species with only one canopy
+  species_counts <- canopies %>%
+    group_by(SpeciesID) %>%
+    tally() %>%
+    filter(n > 1)
   
-  # Train the random forest model with probability predictions
+  canopies_filtered <- canopies %>%
+    filter(SpeciesID %in% species_counts$SpeciesID)
+  
+  # Step 3: Stratified 50/50 split
+  split_idx <- createDataPartition(canopies_filtered$SpeciesID, p = 0.5, list = FALSE)
+  train_canopies <- canopies_filtered[split_idx, ]
+  test_canopies <- canopies_filtered[-split_idx, ]
+  
+  # Step 4: Full pixel data for each canopy
+  train_df <- spec_chem_canopy %>% filter(TreeID %in% train_canopies$TreeID)
+  test_df <- spec_chem_canopy %>% filter(TreeID %in% test_canopies$TreeID)
+  
+  # Step 5: Subsample 50 pixels per species from training data
+  train_df <- train_df %>%
+    group_by(SpeciesID) %>%
+    slice_sample(n = 50, replace = FALSE) %>%
+    ungroup()
+  
+  # Ensure SpeciesID is a factor for model training
+  train_df$SpeciesID <- as.factor(train_df$SpeciesID)
+  test_df$SpeciesID <- as.factor(test_df$SpeciesID)
+  
+  # Step 6: Train the model
   rf_mod <- ranger::ranger(
     as.formula(paste(className, "~ .")),
-    data = training, # designating training sample
-    num.trees = 1000, #Number of nodes used to make predictions
-    probability = TRUE  # This enables prediction probabilities
+    data = train_df,
+    num.trees = 1000,
+    probability = TRUE
   )
   
-  # Predict on the testing data
-  rf_pred_prob <- predict(rf_mod, data = testing)
-  
-  # Get the predicted probabilities (all classes) from the model
-  predicted_probabilities <- rf_pred_prob$predictions  # A matrix of probabilities
-  
-  # Use `apply` and `which.max` to get the index of the class with the highest probability for each observation
+  # Step 7: Predict
+  rf_pred_prob <- predict(rf_mod, data = test_df)
+  predicted_probabilities <- rf_pred_prob$predictions
   predicted_class_index <- apply(predicted_probabilities, 1, which.max)
-  
-  # Map these indices to the actual class labels
   predicted_class <- colnames(predicted_probabilities)[predicted_class_index]
   
-  # Ensure the factor levels of predicted class and actual class are the same
-  predicted_class <- factor(predicted_class, levels = levels(testing[[className]]))
-  actual_class <- factor(testing[[className]], levels = levels(testing[[className]]))
+  # Step 8: Evaluation
+  predicted_class <- factor(predicted_class, levels = levels(test_df[[className]]))
+  actual_class <- factor(test_df[[className]], levels = levels(test_df[[className]]))
   
-  # Confusion Matrix
   conf_matrix <- caret::confusionMatrix(predicted_class, actual_class)
-  
-  # Extract performance metrics
   accuracy <- conf_matrix$overall['Accuracy']
   kappa <- conf_matrix$overall['Kappa']
-  p_value <- conf_matrix$overall['AccuracyPValue']  # p-value for Accuracy compared to NIR
+  p_value <- conf_matrix$overall['AccuracyPValue']
   
-  # Store the results
   results <- rbind(results, data.frame(
     Iteration = i,
     Accuracy = accuracy,
@@ -89,7 +95,9 @@ for (i in 1:iterations) {
   beep()
 }
 
+# Print the results
 print(results)
+
 # Write the results to a CSV file
 write.csv(results, "E:/Git Paint Rock 1.0/Output/RF_Model_Bootstrap_Results/bootstrap_model_results.csv",
           row.names = FALSE)
@@ -113,4 +121,3 @@ boxplot <- ggplot(results_long, aes(x = Metric, y = Value, fill = Metric)) +
 # Save the boxplot to a file (for example, as a PNG)
 ggsave("E:/Git Paint Rock 1.0/Output/RF_Model_Bootstrap_Results/boxplot_results.png",
        plot = boxplot, width = 8, height = 6, dpi = 300)
-
