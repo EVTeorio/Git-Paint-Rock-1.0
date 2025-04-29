@@ -11,7 +11,7 @@ library(beepr)
 beep()
 
 
-spec_chem_canopy <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/5nm_Sunlit.csv")
+spec_chem_canopy <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Sunlit_Pixels.csv")
 str(spec_chem_canopy)
 
 
@@ -44,8 +44,6 @@ test_canopies <- canopies_filtered[-split_idx, ]
 train_df <- spec_chem_canopy %>% filter(TreeID %in% train_canopies$TreeID)
 test_df <- spec_chem_canopy %>% filter(TreeID %in% test_canopies$TreeID)
 
-# Step 5: Output info
-cat("Train set rows:", nrow(train_df), "\n")
-cat("Test set rows:", nrow(test_df), "\n")
+
 
 

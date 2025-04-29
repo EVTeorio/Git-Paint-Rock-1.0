@@ -7,7 +7,7 @@ library(beepr)
 beep()
 
 # Read in data
-spec_chem_canopy <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/NewCanopiesMD_Sunlit.csv")
+spec_chem_canopy <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/5nm_Sunlit.csv")
 colnames(spec_chem_canopy)
 spec_chem_canopy <- mean_vegetation_indices
 ###########QA/QC

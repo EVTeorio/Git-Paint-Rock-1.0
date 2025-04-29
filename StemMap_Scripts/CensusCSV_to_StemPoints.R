@@ -8,7 +8,7 @@ library(sf)
 
 
 #Read the CSV file#Required to convert to Stem map
-csv_file <- "E:/BASE_PR_20/Updated Census/ALL 25 data with issues.csv"  # Replace with your file path
+csv_file <- "E:/BASE_PR_20/Updated Census/ALLstems.csv"  # Replace with your file path
 df <- read.csv(csv_file)
 
 # Filter rows where "crown position" is 3, 4, or 5, and "status 2024" is "A"
@@ -29,7 +29,7 @@ sf_points <- st_as_sf(df_filtered_crown_position, coords = c("long", "lat"), crs
 plot(sf_points)
 
 # Step 5: Save as a shapefile#Required to convert to Stem map
-shapefile_output <- "E:/BASE_PR_20/Updated Census/StemMap_4_1.shp"  # Replace with your desired output file path
+shapefile_output <- "E:/BASE_PR_20/Updated Census/StemMap_4_28.shp"  # Replace with your desired output file path
 st_write(sf_points, shapefile_output)
 
 cat("Shapefile created successfully.")
