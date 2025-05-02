@@ -13,7 +13,7 @@ library(beepr)
 beep()
 
 # 1. Load the raster file (assuming you have a raster of spectral bands)
-img_path <- "E:/Hyperspec Images/raw_11892_rd_rf_or"
+img_path <- "E:/Hyperspec Images/raw_7995_rd_rf_or"
 img <- brick(img_path)
 
 # 2. Extract spectral values from the raster (assuming bands represent columns of spectral data)
@@ -102,14 +102,6 @@ legend("right",
 plot(conf_raster, main = "Prediction Confidence")
 
 # Write to disk
-writeRaster(pred_raster, "E:/Git Paint Rock 1.0/Output/Classified_Images/11892_classified_sunlit.tif", format = "GTiff", overwrite = TRUE)
-writeRaster(conf_raster, "E:/Git Paint Rock 1.0/Output/Classified_Images/11892_confidence_sunlit.tif", format = "GTiff", overwrite = TRUE)
-
-###############################################################################################
-
-# Convert to factor again with SpeciesCode labels
-species_codes <- pred_raster@data@attributes[[1]][["SpeciesCode"]]
-pred_raster <- as.factor(pred_raster)
-levels(pred_raster) <- data.frame(ID = 1:length(species_codes), SpeciesCode = species_codes)
-
+writeRaster(pred_raster, "E:/Git Paint Rock 1.0/Output/Classified_Images/7995_classified_sunlit.tif", format = "GTiff", overwrite = TRUE)
+writeRaster(conf_raster, "E:/Git Paint Rock 1.0/Output/Classified_Images/7995_confidence_sunlit.tif", format = "GTiff", overwrite = TRUE)
 

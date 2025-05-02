@@ -43,6 +43,9 @@ rf_mod <- ranger::ranger(
   probability = TRUE
 )
 
+# Save the model to an RDS file
+saveRDS(rf_mod, file = "E:/Git Paint Rock 1.0/Hyperspectral/Models/rf_model_speciesID.rds")
+
 # Predict on the testing data
 rf_pred_prob <- predict(rf_mod, data = test_df)
 

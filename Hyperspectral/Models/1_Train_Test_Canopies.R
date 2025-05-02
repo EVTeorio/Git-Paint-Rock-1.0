@@ -44,6 +44,6 @@ test_canopies <- canopies_filtered[-split_idx, ]
 train_df <- spec_chem_canopy %>% filter(TreeID %in% train_canopies$TreeID)
 test_df <- spec_chem_canopy %>% filter(TreeID %in% test_canopies$TreeID)
 
-
+write.csv(test_canopies, "E:/Git Paint Rock 1.0/Hyperspectral/Models/test_canopies.csv")
 
 
