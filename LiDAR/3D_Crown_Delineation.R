@@ -6,14 +6,14 @@ library(lidR)
 library(terra)
 library(ggplot2)
 library(dplyr)
-
-
+library(beepr)
+beep()
 
 las <- readLAS("E:/Updated LiDAR/PaintRock_20ha_leafOn_Subset.laz")
 
 help("delineate_crowns")
 
-trees <- segment_trees(las, li2012(dt1 = 5, dt2 = 2, R = 1, Zu = 15, hmin = 10, speed_up = 10),
+trees <- segment_trees(las, li2012(dt1 = 4, dt2 = 3, R = .5, Zu = 7, hmin = 15, speed_up = 5),
                        attribute = "treeID", uniqueness = "incremental")
 
 crowns <- delineate_crowns(
@@ -52,4 +52,4 @@ ggplot(crowns_df) +
 st_write(centroids, "E:/Git Paint Rock 1.0/Output/LiDAR Segmentation/centroids.shp", append = FALSE)
 
 # Write the shapefile to disk
-st_write(crowns_df, "E:/Git Paint Rock 1.0/Output/LiDAR Segmentation/li2012_Segemented_Canopies.shp", append = FALSE)
+st_write(crowns_df, "E:/Git Paint Rock 1.0/Output/LiDAR/leafon_Segemention_43_57.shp", append = FALSE)
