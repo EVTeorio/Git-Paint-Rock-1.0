@@ -1,0 +1,16 @@
+ENVI
+description = {
+E:/Git Paint Rock 1.0/Output/Classified_Images/11892_classified_sunlit.envi}
+samples = 1302
+lines   = 1946
+bands   = 1
+header offset = 0
+file type = ENVI Standard
+data type = 2
+interleave = bsq
+byte order = 0
+map info = {Geographic Lat/Lon, 1, 1, -86.3062418574071, 34.773355769318, 1.13611362451138e-06, 9.37474148088313e-07,WGS-84}
+coordinate system string = {GEOGCS["GCS_unknown",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]}
+band names = {
+Band 1}
+data ignore value = -32768

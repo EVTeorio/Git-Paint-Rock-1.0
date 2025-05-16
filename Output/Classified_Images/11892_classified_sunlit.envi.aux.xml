@@ -1,0 +1,42 @@
+<PAMDataset>
+  <Metadata>
+    <MDI key="Band_1">Band 1</MDI>
+  </Metadata>
+  <Metadata domain="ENVI">
+    <MDI key="description">{E:/Git Paint Rock 1.0/Output/Classified_Images/11892_classified_sunlit.envi}</MDI>
+    <MDI key="samples">1302</MDI>
+    <MDI key="lines">1946</MDI>
+    <MDI key="bands">1</MDI>
+    <MDI key="header_offset">0</MDI>
+    <MDI key="file_type">ENVI Standard</MDI>
+    <MDI key="data_type">2</MDI>
+    <MDI key="interleave">bsq</MDI>
+    <MDI key="byte_order">0</MDI>
+    <MDI key="map_info">{Geographic Lat/Lon, 1, 1, -86.3062418574071, 34.773355769318, 1.13611362451138e-06, 9.37474148088313e-07,WGS-84}</MDI>
+    <MDI key="coordinate_system_string">{GEOGCS["GCS_unknown",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]}</MDI>
+    <MDI key="band_names">{Band 1}</MDI>
+    <MDI key="data_ignore_value">-32768</MDI>
+  </Metadata>
+  <Metadata domain="IMAGE_STRUCTURE">
+    <MDI key="INTERLEAVE">BAND</MDI>
+  </Metadata>
+  <PAMRasterBand band="1">
+    <NoDataValue>-3.27680000000000E+04</NoDataValue>
+    <Histograms>
+      <HistItem>
+        <HistMin>0.5238095238095238</HistMin>
+        <HistMax>21.47619047619047</HistMax>
+        <BucketCount>21</BucketCount>
+        <IncludeOutOfRange>0</IncludeOutOfRange>
+        <Approximate>0</Approximate>
+        <HistCounts>121097|924203|29619|158598|19848|63719|29870|14184|67888|65246|189723|97788|290548|88166|93978|45378|63826|36599|40270|71827|21317</HistCounts>
+      </HistItem>
+    </Histograms>
+    <Metadata>
+      <MDI key="STATISTICS_MAXIMUM">21</MDI>
+      <MDI key="STATISTICS_MEAN">-9999</MDI>
+      <MDI key="STATISTICS_MINIMUM">1</MDI>
+      <MDI key="STATISTICS_STDDEV">-9999</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>

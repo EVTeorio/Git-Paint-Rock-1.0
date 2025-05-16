@@ -7,7 +7,7 @@ library(terra)
 
 # --- 1. Load LiDAR point cloud ---
 las <- readLAS("E:/Updated LiDAR/PaintRock_20ha_leafOff_subset.laz")
-
+crs(las)
 # --- 2. Load trajectory file ---
 trajectory <- fread("E:/Updated LiDAR/AMAPVox/2024-06-19_PaintRockFDP_20ha_traj.txt")
 

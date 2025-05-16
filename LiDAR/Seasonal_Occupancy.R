@@ -59,4 +59,3 @@ plot(som_raster)
 # Save as GeoTIFF
 writeRaster(som_raster, "seasonal_voxel_occupancy.tif", overwrite = TRUE)
 
-# Can you also give a snippet that will plot the foliage density of each the leaf on and leaf off?
