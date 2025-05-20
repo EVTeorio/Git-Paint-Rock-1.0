@@ -18,7 +18,7 @@ beep()
 
 
 # Set the input raster folder and output CSV location
-img_path <- "E:/HSI_Files_Parsing/raw_19025_rd_rf_or"
+img_path <- "E:/HSI_Files_Parsing/raw_4763_rd_rf_or"
 
 # Load raster brick
 raster_data <- brick(img_path)
@@ -38,7 +38,7 @@ spectral_values
 # Convert the data frame to a format compatible with your vegetation index function
 trees_image_spectra_df <- speclib_to_df(final_df)
     
-# Calculate vegetation indices for the pixels 7:30 start time
+# Calculate vegetation indices for the pixels 1 hour per 1.4GB on 16 GB RAM 14 thread processor
 trees_image_spectra_VIs <- get_vegetation_indices(trees_image_spectra_df, NULL)
 beep()
 
@@ -63,8 +63,8 @@ res(VI_raster) <- res(raster_data)
 crs(VI_raster) <- crs(raster_data)
 
 # Set output filename
-output_name <- file.path("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Vegetaion Indices Images/raw_17025_rd_rf_or_VI")
+output_name <- file.path("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Vegetaion Indices Images/raw_4763_rd_rf_or_VI")
 
 # Write raster as ENVI format
 writeRaster(VI_raster, filename = output_name, format = "ENVI", overwrite = TRUE)
-beep(7)
+beep(3)
