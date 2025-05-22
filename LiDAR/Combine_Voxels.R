@@ -68,6 +68,6 @@ for (z in 0:(dims["z"] - 1)) {
   pad_stack <- addLayer(pad_stack, r)
 }
 
-# OPTIONAL: Save raster stack to disk
+# Save raster stack to disk
 writeRaster(pad_stack, filename = file.path(vox_path, "PAD_stack.tif"),
             format = "GTiff", overwrite = TRUE)

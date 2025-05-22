@@ -1,7 +1,5 @@
-#this file:  E:/Git Paint Rock 1.0/LiDAR/CombineAMAPVoxChunks.R
 
-
-setwd("E:/Git Paint Rock 1.0/Output/LiDAR/Transmittance_Leafoff/")
+setwd("E:/LeafOff_Rasters/")
 
 library(AMAPVox); library(terra); library(raster)
 
@@ -83,11 +81,20 @@ for(i in 1:length(chunkFiles)){
           minVal <- minVal+k
           maxVal <- maxVal+k
           PAD_k <-  toRaster(chunk, chunk@data[ground_distance > minVal & ground_distance <= maxVal , .(i, j, pad_transmittance)])
-          PAD_j <- PAD_j + PAD_k
+          PAD_j <- c(PAD_j, PAD_k)
         }
         
+        #Normalizing
+        nObs <- PAD_j
+        nObs[!is.na(nObs)] <- 1
+        PAD_sum <- app(PAD_j, fun = function(x) sum(x, na.rm = TRUE))
+        nObs_sum <- app(nObs, fun = function(x) sum(x, na.rm = TRUE))
+        PAD_sum_normalized <- lapp(c(PAD_sum, nObs_sum), fun = function(pad, count) {
+          pad * (5 / count)
+        })
+        
         # rename with temporary value
-        assign(paste0(heightLayerInfo$layerName[j],"_j"), PAD_j)
+        assign(paste0(heightLayerInfo$layerName[j],"_j"), PAD_sum_normalized)
         
         # merge rasters
         mergedRast <- merge(get(heightLayerInfo$layerName[j]),
@@ -123,5 +130,6 @@ raster_files <- list.files(path = folder_path, pattern = "\\.tif$", full.names =
 # Read and stack the rasters
 raster_stack <- rast(raster_files)
 
-plot(PAD_10_15)
-plot(mergedRast)
+plot(PAD_25_30)
+
+
