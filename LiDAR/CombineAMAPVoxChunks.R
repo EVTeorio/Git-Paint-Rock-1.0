@@ -115,7 +115,7 @@ for(i in 1:nrow(heightLayerInfo)){
 
 ################################################################################
 # Set your folder path
-folder_path <- "E:/Git Paint Rock 1.0/Output/LiDAR/Transmittance_Leafoff/"
+folder_path <- "E:/LeafOff_Rasters/"
 
 # List all raster files (e.g., .tif files)
 raster_files <- list.files(path = folder_path, pattern = "\\.tif$", full.names = TRUE)
@@ -123,5 +123,12 @@ raster_files <- list.files(path = folder_path, pattern = "\\.tif$", full.names =
 # Read and stack the rasters
 raster_stack <- rast(raster_files)
 
-plot(PAD_10_15)
+# Assuming raster_stack is a SpatRaster object from terra
+# Define a color palette: red for low, blue for high values
+myColors <- colorRampPalette(c("yellow","red", "green", "blue"))(100)
+
+# Plot using custom color ramp
+plot(raster_stack, col = myColors)
+
+plot(raster_stack)
 plot(mergedRast)

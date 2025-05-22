@@ -2,12 +2,13 @@
 library(terra)
 library(raster)
 library(sf)
+library(beepr)
 beep(3)
 
 # Define file paths
-HSI_dir <- "E:/Final_Rasters/Fusion_VI_Leafoff/"  # Directory containing rasters
-canopies_path <- "E:/Git Paint Rock 1.0/Hyperspectral/Updated Canopy Polygons/Updated/"  # Path to shapefiles
-Output_path <- "E:/Final_Rasters/Fusion_VI_Leafoff/Canopies_Fusion_VI_Leafoff/"
+HSI_dir <- "E:/Vegetaion Indices Images/"  # Directory containing rasters
+canopies_path <- "E:/Git Paint Rock 1.0/Updated Canopy Polygons/Updated/"  # Path to shapefiles
+Output_path <- "E:/Final_Rasters/Canopies_VI/"
 
 # List all files in the hyperspectral image directory (without extensions)
 allfiles <- list.files(HSI_dir)
@@ -79,7 +80,7 @@ lapply(matched_files, function(img_number) {
     names(tst_mask) <- tst_names
     
     # Generate the output filename using the modified polygon name
-    output_filename <- paste0("E:/Git Paint Rock 1.0/Output/Test_Canopy_Rasters_HSI_leafoff/", polygon_name, ".ENVI")
+    output_filename <- paste0(Output_path, polygon_name, ".ENVI")
     
     # Save the masked raster to a file
     writeRaster(tst_mask, output_filename, overwrite = TRUE)

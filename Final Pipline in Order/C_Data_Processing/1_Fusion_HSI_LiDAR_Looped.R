@@ -3,9 +3,9 @@
 library(terra)
 
 # Set file paths
-vi_dir <- "C:/Users/PaintRock/Documents/Data processing/Hyperspectral/Vegetaion Indices Images/Fusion_VI_Leafoff/"
-output_dir <- "E:/Final_Ratsers/"
-lidar_path <- "E:/Git Paint Rock 1.0/Output/LiDAR/Transmittance_Leafoff/PAD_25_30_leafOff_transmittance.tif"
+vi_dir <- "E:/Vegetaion Indices Images/"
+output_dir <- "E:/Final_Rasters/Fusion_VI_ALLmetrics_Images"
+lidar_path <- "E:/LiDAR_Metrics/ALL_Metrics.tif"
 crs_raster_path <- "E:/Updated LiDAR/PRFPD_CHM_leafOff.tiff"
 
 # Load static rasters
@@ -34,7 +34,7 @@ for (vi_path in vi_files) {
   
   # Generate output filename based on VI filename
   vi_filename <- tools::file_path_sans_ext(basename(vi_path))  # Remove extension
-  output_path <- file.path(output_dir, paste0(vi_filename, "_combined.envi"))
+  output_path <- file.path(output_dir, paste0(vi_filename, "_ALLmetrics.envi"))
   
   # Write output raster
   writeRaster(combined,

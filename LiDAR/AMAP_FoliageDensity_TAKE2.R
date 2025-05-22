@@ -1,24 +1,37 @@
 
 
-install.packages("AMAPVox")
+install.packages("raster")
 
-library(AMAPVox)
-
-# launch AMAPVox GUI
-AMAPVox::run()
-#################################
-
-library(data.table)
-library(ggplot2)
+library(AMAPVox); library(terra);
 library(raster)
+library(beepr)
+library(data.table)
 
-vox <- combined_vox
-# Load voxel data
-vox <- readVoxelSpace("E:/Updated LiDAR/1m Voxels/AMAPVox_batch_results/Voxels_1m_563602_563702_3847774_3848274.vox")
-data <- vox@data
+# get file paths for chunk files
+chunkFiles <- 
+  list.files("E:/Updated LiDAR/Transmittance_Voxels/AMAPVox_batch_results_Transmittance_LeafOff/", full.names = T)
+
+
+chunkList <- lapply(chunkFiles, function(file) {
+  vox <- readVoxelSpace(file)
+  vox@data <- vox@data[!is.na(vox@data$ground_distance) & vox@data$ground_distance < 100]
+  return(vox)
+})
+beep()
+for (i in seq_along(chunkList)) {
+  origin <- chunkList[[i]]@header$mincorner
+  chunkList[[i]]@data[, i := i + round(origin['x'])]
+  chunkList[[i]]@data[, j := j + round(origin['y'])]
+  chunkList[[i]]@data[, k := k + round(origin['z'])]
+}
+
+combinedData <- rbindlist(lapply(chunkList, function(x) x@data), use.names = TRUE, fill = TRUE)
+combinedChunk <- chunkList[[1]]
+combinedChunk@data <- combinedData
+
+data <- combinedChunk@data
 
 # Compute transmittance and PAD
-data[, transmittance := ifelse(bsEntering > 0, (bsEntering - bsIntercepted) / bsEntering, NA)]
 data[, PadBV_Estimated := -log(transmittance) / lMeanTotal]
 data[!is.finite(PadBV_Estimated), PadBV_Estimated := NA]
 
@@ -27,7 +40,6 @@ data[, height_bin := floor(ground_distance)]  # round down to nearest meter
 
 # Filter valid PAD values
 valid_data <- data[!is.na(PadBV_Estimated) & !is.na(height_bin)]
-
 
 # stratafied PAD 
 band_starts <- seq(0, 40, by = 5)  
@@ -55,6 +67,7 @@ for (band_name in names(height_bands)) {
        zlim = c(.1, 6))
 }
 
+plot(r)
 ################################################################################
 
 # Ensure all rasters have the same extent and resolution by resampling to the reference raster
@@ -73,3 +86,4 @@ plot(raster_stack, main = "1m Resolution PAD Raster Stack", col = terrain.colors
 
 # Optional: Save raster stack to GeoTIFF
 writeRaster(raster_stack, "E:/Git Paint Rock 1.0/Output/LiDAR/PAD_raster_stack.tif", format = "GTiff", overwrite = TRUE)
+
