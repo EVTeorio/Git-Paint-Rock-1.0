@@ -7,17 +7,16 @@ library(beepr)
 beep()
 
 # Read in data
-spec_chem_canopy <- read.csv("C:/Users/PaintRock/Documents/Data processing/Hyperspectral/5nm_Sunlit.csv")
+spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_EndALL_BeALL.csv")
 colnames(spec_chem_canopy)
-spec_chem_canopy <- mean_vegetation_indices
 ###########QA/QC
 # Filter rows 
 #spec_chem_canopy <- spectral_df
 #unique(Subset_Data$TileNumber)
 
-#Subset_Data <- spec_chem_canopy
+Subset_Data <- spec_chem_canopy
 
-#spec_chem_canopy <- Subset_Data[Subset_Data$TileNumber == 32619, ]
+spec_chem_canopy <- Subset_Data[Subset_Data$TileNumber == 32619, ]
 ######################
 
 

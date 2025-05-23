@@ -6,9 +6,8 @@ library(beepr)
 beep(3)
 
 # Define file paths
-HSI_dir <- "E:/Vegetaion Indices Images/"  # Directory containing rasters
+HSI_dir <- "E:/Final_Rasters/Fusion_VI_Leafon_Images/"  # Directory containing rasters
 canopies_path <- "E:/Git Paint Rock 1.0/Updated Canopy Polygons/Updated/"  # Path to shapefiles
-Output_path <- "E:/Final_Rasters/Canopies_VI/"
 
 # List all files in the hyperspectral image directory (without extensions)
 allfiles <- list.files(HSI_dir)
@@ -33,64 +32,101 @@ if (length(matched_files) == 0) {
   stop("No matching image numbers between hyperspectral images and shapefiles.")
 }
 
-# Process each matched image and its corresponding shapefile
+# Loop through matched files
 lapply(matched_files, function(img_number) {
+  cat("Processing image number:", img_number, "\n")
   
-  # Get the corresponding hyperspectral image and shapefile based on the image number
-  img_idx <- which(img_numbers == img_number)  # Ensure only one match is found
-  img_path <- file.path(HSI_dir, imgs[img_idx])  # Full path to the image
-  canopy_path <- canopies_sites[shapefile_numbers == img_number]  # Full path to the shapefile
+  img_idx <- which(img_numbers == img_number)
+  img_path <- file.path(HSI_dir, imgs[img_idx])
+  canopy_path <- canopies_sites[shapefile_numbers == img_number]
   
-  # Check if the image path exists before proceeding
   if (!file.exists(img_path)) {
-    stop(paste("Image file does not exist:", img_path))
+    warning(paste("Image file does not exist:", img_path))
+    return(NULL)
   }
   
-  # Load the hyperspectral image
-  tst_img <- terra::rast(img_path)
-  tst_names <- names(tst_img)  # Get the band names
+  # Load raster
+  tst_img <- tryCatch({
+    terra::rast(img_path)
+  }, error = function(e) {
+    warning(paste("Failed to load raster:", img_path, "-", e$message))
+    return(NULL)
+  })
+  if (is.null(tst_img)) return(NULL)
   
-  # Load the corresponding canopy shapefile
-  tst_quads <- terra::vect(canopy_path)
+  # Load shapefile
+  tst_quads <- tryCatch({
+    terra::vect(canopy_path)
+  }, error = function(e) {
+    warning(paste("Failed to load shapefile:", canopy_path, "-", e$message))
+    return(NULL)
+  })
+  if (is.null(tst_quads)) return(NULL)
   
-  # Process each polygon in the shapefile
-  lapply(1:length(tst_quads), function(i) {
-    
-    # Get the polygon
-    canopy_polygon <- tst_quads[i]
-    
-    # Get the name of the polygon (assuming it's stored in a field called "Canopies")
-    polygon_name <- canopy_polygon$Canopies  # Adjust if needed to the correct field name in your shapefile
-    
-    # If the polygon name is NULL or missing, use a default name
-    if (is.null(polygon_name) | is.na(polygon_name)) {
-      polygon_name <- paste0(i)  # Default name if 'Canopies' is missing
+  # Validate geometry
+  valid_geoms <- terra::is.valid(tst_quads)
+  if (any(!valid_geoms)) {
+    warning(paste("Invalid geometries found in shapefile:", canopy_path))
+    tst_quads <- tst_quads[valid_geoms]
+    if (length(tst_quads) == 0) {
+      warning("No valid geometries remaining. Skipping.")
+      return(NULL)
     }
-    
-    # Add the hyperspectral image number to the polygon name
+  }
+  
+  # Check CRS match
+  if (crs(tst_img) != crs(tst_quads)) {
+    warning(paste("CRS mismatch between image and shapefile. Reprojecting shapefile:", canopy_path))
+    tst_quads <- terra::project(tst_quads, crs(tst_img))
+  }
+  
+  # Check extent overlap
+  ext_overlap <- terra::intersect(terra::ext(tst_img), terra::ext(tst_quads))
+  if (is.null(ext_overlap)) {
+    warning(paste("Extent of shapefile does not overlap raster:", canopy_path))
+    return(NULL)
+  }
+  
+  # Process each polygon
+  lapply(1:length(tst_quads), function(i) {
+    canopy_polygon <- tst_quads[i]
+    polygon_name <- canopy_polygon$Canopies
+    if (is.null(polygon_name) | is.na(polygon_name)) {
+      polygon_name <- paste0(i)
+    }
     polygon_name <- paste0(img_number, "_", polygon_name)
     
-    # Crop the raster to the polygon boundary
-    tst_crop <- terra::crop(tst_img, canopy_polygon)
+    # Crop & mask
+    tst_crop <- tryCatch({
+      terra::crop(tst_img, canopy_polygon)
+    }, error = function(e) {
+      warning(paste("Failed to crop for polygon", polygon_name, "-", e$message))
+      return(NULL)
+    })
+    if (is.null(tst_crop)) return(NULL)
     
-    # Mask the cropped raster with the polygon
-    tst_mask <- terra::mask(tst_crop, canopy_polygon)
+    tst_mask <- tryCatch({
+      terra::mask(tst_crop, canopy_polygon)
+    }, error = function(e) {
+      warning(paste("Failed to mask for polygon", polygon_name, "-", e$message))
+      return(NULL)
+    })
+    if (is.null(tst_mask)) return(NULL)
     
-    # Set the band names
-    names(tst_mask) <- tst_names
+    names(tst_mask) <- names(tst_img)
     
-    # Generate the output filename using the modified polygon name
-    output_filename <- paste0(Output_path, polygon_name, ".ENVI")
+    output_filename <- paste0("E:/Final_Rasters/Canopies_VI_Leafon/", polygon_name, ".ENVI")
     
-    # Save the masked raster to a file
-    writeRaster(tst_mask, output_filename, overwrite = TRUE)
+    tryCatch({
+      writeRaster(tst_mask, output_filename, overwrite = TRUE)
+    }, error = function(e) {
+      warning(paste("Failed to write raster", output_filename, "-", e$message))
+    })
     
-    # Clean up memory after processing each polygon
     rm(tst_crop, tst_mask)
     gc()
   })
   
-  # Clean up memory after processing the whole image
   rm(tst_img, tst_quads)
   gc()
 })
