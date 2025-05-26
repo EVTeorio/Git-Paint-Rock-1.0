@@ -6,10 +6,12 @@ library(tidyr)
 library(stringr)
 library(beepr)
 
-beep(3)
+beep()
 
 # Read and prepare data
 spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit.csv")
+justincase <- spec_chem_canopy
+spec_chem_canopy <- na.omit(spec_chem_canopy)
 
 canopies <- spec_chem_canopy %>%
   group_by(TreeID) %>%

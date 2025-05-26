@@ -5,6 +5,7 @@ library(dplyr)
 library(stringr)
 library(caret)
 library(randomForest)
+library(beepr)
 
 # Read in full dataset
 spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit.csv")
@@ -171,8 +172,8 @@ write.csv(summary_metrics, "E:/Thesis_Final_Data/Analysis/model_summary_metrics.
 ##############################################################################
 
 # Accuracy boxplot across models
-ggplot(summary_metric %>% distinct(Sample, Model, Accuracy), 
-       aes(x = Model, y = Accuracy)) +
+ggplot(summary_metrics %>% distinct(Sample, Model, Accuracy.Accuracy), 
+       aes(x = Model, y = Accuracy.Accuracy)) +
   geom_boxplot(fill = "#69b3a2") +
   labs(title = "Accuracy by Model Across 10 Samples",
        x = "Model Type", y = "Accuracy") +
