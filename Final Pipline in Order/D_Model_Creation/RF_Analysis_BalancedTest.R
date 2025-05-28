@@ -20,7 +20,7 @@ canopies <- spec_chem_canopy %>%
 # Keep only species with >8 canopies
 species_counts <- canopies %>%
   count(SpeciesID) %>%
-  filter(n > 8)
+  filter(n > 5)
 
 canopies_filtered <- canopies %>%
   filter(SpeciesID %in% species_counts$SpeciesID)
@@ -54,6 +54,7 @@ model_inputs <- list(
 
 # Store results from 10 repetitions
 all_results <- list()
+importance_results <- list()  # New list to store variable importance
 
 for (i in 1:10) {
   cat("\n--- Running Sample", i, "---\n")
@@ -62,17 +63,25 @@ for (i in 1:10) {
   # Select 5 canopies per species for training
   train_canopies <- canopies_filtered %>%
     group_by(SpeciesID) %>%
-    slice_sample(n = 5) %>%
+    slice_sample(n = 4) %>%
     ungroup()
   
-  test_canopies <- anti_join(canopies_filtered, train_canopies, by = "TreeID")
+  test_canopies_all <- anti_join(canopies_filtered, train_canopies, by = "TreeID")
+  
+  # Sample exactly 2 test canopies randomly from remaining
+  test_canopies <- test_canopies_all %>%
+    slice_sample(n = 2)
   
   # Get training and test pixels
   train_df <- spec_chem_canopy %>%
     filter(TreeID %in% train_canopies$TreeID)
   
+  # For testing: sample 200 pixels per test canopy (balanced)
   test_df <- spec_chem_canopy %>%
-    filter(TreeID %in% test_canopies$TreeID)
+    filter(TreeID %in% test_canopies$TreeID) %>%
+    group_by(TreeID) %>%
+    slice_sample(n = 200) %>%
+    ungroup()
   
   # Ensure factors
   train_df$SpeciesID <- as.factor(train_df$SpeciesID)
@@ -86,6 +95,7 @@ for (i in 1:10) {
   
   # Store results per model type
   results <- list()
+  importances <- list()  # Temp list to hold importance for each model in this iteration
   
   for (model_name in names(model_inputs)) {
     cat("  -> Training model:", model_name, "\n")
@@ -102,7 +112,7 @@ for (i in 1:10) {
       drop_na()
     
     # Train model
-    rf_model <- randomForest(SpeciesID ~ ., data = train_data, ntree = 3000, importance = TRUE)
+    rf_model <- randomForest(SpeciesID ~ ., data = train_data, ntree = 3000, predicted = TRUE)
     
     # Predict on independent test canopy pixels
     preds <- predict(rf_model, newdata = test_data)
@@ -122,14 +132,20 @@ for (i in 1:10) {
       f1_by_class = f1_by_class,
       f1_macro = f1_macro
     )
+    
+    # Extract and store variable importance
+    importances[[model_name]] <- importance(rf_model)
   }
   
   all_results[[paste0("Sample_", i)]] <- results
+  importance_results[[paste0("Sample_", i)]] <- importances  # Save importance per model per sample
 }
 
-#save entire thing
-saveRDS(all_results, file = "E:/Thesis_Final_Data/all_rf_results.rds")
-beep(3)
+# Save both results and importances
+saveRDS(all_results, file = "E:/Thesis_Final_Data/TestBal_all_rf_results.rds")
+saveRDS(importance_results, file = "E:/Thesis_Final_Data/TestBal_all_rf_importances.rds")
+
+beep()
 # To load later
 # all_result <- readRDS("E:/Thesis_Final_Data/all_rf_results.rds")
 ########################################################################
@@ -168,7 +184,7 @@ numeric_cols <- setdiff(names(summary_metrics), c("Sample", "Model"))
 summary_metrics[numeric_cols] <- lapply(summary_metrics[numeric_cols], as.numeric)
 
 # Save to CSV
-write.csv(summary_metrics, "E:/Thesis_Final_Data/Analysis/8species_model_summary.csv", row.names = FALSE)
+write.csv(summary_metrics, "E:/Thesis_Final_Data/Analysis/TestBal_model_summary.csv", row.names = FALSE)
 ##############################################################################
 
 # Accuracy boxplot across models
@@ -201,8 +217,73 @@ for (sample_name in names(all_results)) {
     result <- all_results[[sample_name]][[model_name]]
     
     # Confusion matrix
-    cm_file <- file.path(output_dir, paste0(sample_name, "_", model_name, "8species_confusion.csv"))
+    cm_file <- file.path(output_dir, paste0(sample_name, "_", model_name, "TestBal_confusion.csv"))
     write.csv(as.table(result$confusion$table), cm_file)
-      }
+  }
 }
 #################################################################################
+###########Importance Summary
+# Initialize list to collect importance rows
+importance_list <- list()
+
+for (sample_name in names(importance_results)) {
+  sample_importances <- importance_results[[sample_name]]
+  
+  for (model_name in names(sample_importances)) {
+    imp_df <- as.data.frame(sample_importances[[model_name]])
+    imp_df$Variable <- rownames(imp_df)
+    imp_df$Sample <- sample_name
+    imp_df$Model <- model_name
+    
+    importance_list[[paste(sample_name, model_name, sep = "_")]] <- imp_df
+  }
+}
+
+# Combine into one long dataframe
+importance_df <- bind_rows(importance_list)
+
+# Clean up and reorder columns
+importance_df <- importance_df %>%
+  relocate(Sample, Model, Variable)
+
+# Optionally convert columns to appropriate types
+importance_df$MeanDecreaseGini <- as.numeric(importance_df$MeanDecreaseGini)
+
+# Save to CSV
+write.csv(importance_df, "E:/Thesis_Final_Data/Analysis/TestBal_importance_summary.csv", row.names = FALSE)
+
+####################################################################################
+
+# Calculate average importance by variable and model
+avg_importance <- importance_df %>%
+  group_by(Model, Variable) %>%
+  summarize(MeanImportance = mean(MeanDecreaseGini, na.rm = TRUE), .groups = "drop") %>%
+  arrange(desc(MeanImportance))
+
+# Plot top 20 important variables per model
+top_vars <- avg_importance %>%
+  group_by(Model) %>%
+  slice_max(order_by = MeanImportance, n = 20)
+
+ggplot(top_vars, aes(x = reorder(Variable, MeanImportance), y = MeanImportance, fill = Model)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  coord_flip() +
+  facet_wrap(~Model, scales = "free_y") +
+  labs(title = "Top 20 Variables by Mean Decrease Gini",
+       x = "Variable", y = "Mean Decrease Gini") +
+  theme_minimal()
+#######################################################3
+
+# Plot distribution of importance scores for top variables
+top_vars_all <- avg_importance %>%
+  slice_max(order_by = MeanImportance, n = 10) %>%
+  pull(Variable) %>%
+  unique()
+
+ggplot(importance_df %>% filter(Variable %in% top_vars_all),
+       aes(x = Variable, y = MeanDecreaseGini, fill = Model)) +
+  geom_boxplot(outlier.size = 0.5) +
+  coord_flip() +
+  labs(title = "Distribution of Importance for Top Variables",
+       x = "Variable", y = "Mean Decrease Gini") +
+  theme_minimal()
