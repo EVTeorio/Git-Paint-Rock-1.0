@@ -4,10 +4,11 @@ library(dplyr)
 library(stringr)
 library(randomForest)
 library(caret)
+library(beepr)
 
 # --- Load data ---
 spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit_no_nas.csv")
-
+beep()
 str(spec_chem_canopy)
 
 # --- Extract unique canopies ---
@@ -55,7 +56,7 @@ for (i in 1:10) {
   # Sample 4 training and 2 test canopies per species
   train_canopies <- canopies_filtered %>%
     group_by(SpeciesID) %>%
-    slice_sample(n = 4) %>%
+    slice_sample(n = 7) %>%
     ungroup()
   
   test_canopies <- anti_join(canopies_filtered, train_canopies, by = "TreeID") %>%
@@ -80,7 +81,7 @@ for (i in 1:10) {
   # Balance training data (50 pixels per canopy)
   balanced_train_df <- train_df %>%
     group_by(TreeID) %>%
-    slice_sample(n = 50) %>%
+    slice_sample(n = 100) %>%
     ungroup()
   
   # One-vs-rest binary classification
@@ -122,7 +123,7 @@ for (i in 1:10) {
     # Variable importance
     imp_bin <- importance(rf_bin)[, "MeanDecreaseGini", drop = FALSE]
     imp_bin <- sort(imp_bin[, 1], decreasing = TRUE)
-    top_features <- head(imp_bin, 10)
+    top_features <- head(imp_bin, 15)
     
     binary_results[[as.character(species)]] <- list(
       accuracy = acc_bin,
@@ -138,3 +139,202 @@ for (i in 1:10) {
 beep()
 # Optional: save the results
 saveRDS(species_importance_results, "E:/Thesis_Final_Data/species_importance_binary.rds")
+
+
+
+##########################################################################################
+species_importance_results <- readRDS("E:/Thesis_Final_Data/species_importance_binary.rds")
+beep()
+
+# Initialize list to collect rows
+summary_list <- list()
+
+for (sample_name in names(species_importance_results)) {
+  sample_results <- species_importance_results[[sample_name]]
+  
+  for (species in names(sample_results)) {
+    res <- sample_results[[species]]
+    
+    # Create a one-row data frame with Sample, Species, Accuracy, Precision, Recall, F1
+    row <- data.frame(
+      Sample = sample_name,
+      Species = species,
+      Accuracy = as.numeric(res$accuracy),
+      Precision = as.numeric(res$precision),
+      Recall = as.numeric(res$recall),
+      F1 = as.numeric(res$f1),
+      stringsAsFactors = FALSE
+    )
+    
+    summary_list[[paste(sample_name, species, sep = "_")]] <- row
+  }
+}
+
+# Combine all rows into one data frame
+species_summary_df <- bind_rows(summary_list)
+
+# Save to CSV
+write.csv(species_summary_df,
+          "E:/Thesis_Final_Data/Analysis/8_species_binary_model_summary.csv", row.names = FALSE)
+############################################################################################
+
+# Initialize list to collect importance data
+importance_list <- list()
+
+for (sample_name in names(species_importance_results)) {
+  sample_results <- species_importance_results[[sample_name]]
+  
+  for (species in names(sample_results)) {
+    imp_vec <- sample_results[[species]]$top_features
+    
+    if (!is.null(imp_vec)) {
+      # Create a data frame with Sample, Species, Feature, Importance
+      imp_df <- data.frame(
+        Sample = sample_name,
+        Species = species,
+        Feature = names(imp_vec),
+        Importance = as.numeric(imp_vec),
+        stringsAsFactors = FALSE
+      )
+      importance_list[[paste(sample_name, species, sep = "_")]] <- imp_df
+    }
+  }
+}
+
+# Combine into one data frame for plotting
+importance_df <- bind_rows(importance_list)
+
+write.csv(importance_df, "E:/Thesis_Final_Data/Analysis/8_species_feature_importance_long.csv", row.names = FALSE)
+
+
+# Create output folder if needed
+output_dir <- "E:/Git Paint Rock 1.0/Output/Analysis/Feature_Boxplots/"
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+
+# Get unique species from importance data
+all_species <- unique(importance_df$Species)
+
+# Loop through each species
+for (species_to_plot in all_species) {
+  
+  # Filter for species
+  df_plot <- importance_df %>%
+    filter(Species == species_to_plot)
+  
+  # Count occurrences of each feature in the top 10
+  feature_counts <- df_plot %>%
+    group_by(Feature) %>%
+    summarise(Count = n()) %>%
+    arrange(Count)  # Ascending order
+  
+  # Join back to add count info
+  df_plot <- df_plot %>%
+    left_join(feature_counts, by = "Feature")
+  
+  # Order features by ascending count
+  df_plot$Feature <- factor(df_plot$Feature, levels = feature_counts$Feature)
+  
+  # Create plot
+  p <- ggplot(df_plot, aes(x = Feature, y = Importance)) +
+    geom_boxplot(fill = "steelblue", alpha = 0.7) +
+    coord_flip() +
+    theme_minimal(base_size = 12) +
+    labs(
+      title = paste("Feature Importance for", species_to_plot),
+      x = "Feature (Top 10 Count)",
+      y = "Mean Decrease Gini"
+    ) +
+    scale_x_discrete(labels = function(x) {
+      counts <- feature_counts$Count[match(x, feature_counts$Feature)]
+      paste0(x, " (n=", counts, ")")
+    })
+  
+  # Save plot
+  ggsave(
+    filename = paste0(output_dir, "Feature_Importance_", species_to_plot, ".png"),
+    plot = p,
+    width = 8,
+    height = 6,
+    dpi = 300
+  )
+  
+  # Print message
+  message("Saved plot for species: ", species_to_plot)
+}
+
+##############################################################################
+
+
+# 1. Calculate mean importance per feature per species (only if present in >=4 samples)
+species_feature_means <- importance_df %>%
+  group_by(Species, Feature) %>%
+  filter(n() >= 4) %>%  # Ensure feature appears in at least 4 samples
+  summarise(MeanImportance = mean(Importance), .groups = "drop")
+
+# 2. Initialize container for selected features
+selected_features <- c()
+
+# 3. Track species-wise top features (excluding already selected ones)
+species_list <- unique(species_feature_means$Species)
+
+while (length(selected_features) < 16) {
+  for (sp in species_list) {
+    # Filter and sort features for this species (excluding already selected ones)
+    sp_feats <- species_feature_means %>%
+      filter(Species == sp & !(Feature %in% selected_features)) %>%
+      arrange(desc(MeanImportance))
+    
+    if (nrow(sp_feats) > 0) {
+      next_best_feat <- sp_feats$Feature[1]
+      selected_features <- unique(c(selected_features, next_best_feat))
+    }
+    
+    if (length(selected_features) >= 16) break
+  }
+}
+
+# 4. Build final summary table: each feature × species mean importance
+final_summary_df <- species_feature_means %>%
+  filter(Feature %in% selected_features) %>%
+  tidyr::pivot_wider(names_from = Species, values_from = MeanImportance) %>%
+  arrange(match(Feature, selected_features))  # Preserve feature selection order
+
+# Optional: Save to CSV
+write.csv(final_summary_df, "E:/Thesis_Final_Data/Analysis/Top25_Feature_Species_MeanImportance.csv", row.names = FALSE)
+
+# 1. Get the 16 selected features
+selected_features <- final_summary_df$Feature
+
+# 2. Filter the original per-sample importance_df for only these features
+per_tree_imp_df <- importance_df %>%
+  filter(Feature %in% selected_features)
+
+# 3. Compute mean importance per (Species, Sample, Feature)
+tree_feature_means <- per_tree_imp_df %>%
+  group_by(Species, Sample, Feature) %>%
+  summarise(MeanImportance = mean(Importance), .groups = "drop")
+
+# 4. Compute global mean importance per feature to determine feature order
+feature_ranking <- tree_feature_means %>%
+  group_by(Feature) %>%
+  summarise(GlobalMeanImportance = mean(MeanImportance), .groups = "drop") %>%
+  arrange(GlobalMeanImportance)
+
+# 5. Set factor levels of Feature in tree_feature_means according to ranking
+tree_feature_means$Feature <- factor(tree_feature_means$Feature, levels = feature_ranking$Feature)
+
+# 6. Plot with features ordered by importance on y-axis
+ggplot(tree_feature_means, aes(x = MeanImportance, y = Feature)) +
+  geom_point(aes(color = Species, size = MeanImportance), alpha = 0.8) +
+  scale_size_continuous(range = c(1, 10)) +
+  labs(
+    title = "Top 16 Features by Species-Tree Mean Importance",
+    x = "Mean Decrease Gini (per sample)",
+    y = "Feature (ranked by overall importance)",
+    size = "Importance"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.y = element_text(size = 11),
+    legend.position = "right"
+  )
