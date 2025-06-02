@@ -10,7 +10,8 @@ library(tidyr)
 
 # Read in full dataset
 spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit_no_nas.csv")
-
+beep()
+str(spec_chem_canopy)
 # Extract unique canopies
 canopies <- spec_chem_canopy %>%
   group_by(TreeID) %>%
@@ -83,17 +84,17 @@ for (i in 1:10) {
   test_df <- spec_chem_canopy %>%
     filter(TreeID %in% test_canopies$TreeID) %>%
     group_by(TreeID) %>%
-    slice_sample(n = 300) %>%
+    slice_sample(n = 200) %>%
     ungroup()
   
   # Ensure factors
   train_df$SpeciesID <- as.factor(train_df$SpeciesID)
   test_df$SpeciesID <- as.factor(test_df$SpeciesID)
   
-  # Sample 500 pixels per training TreeID
+  # Sample 50 pixels per training TreeID
   balanced_train_df <- train_df %>%
     group_by(TreeID) %>%
-    slice_sample(n = 150) %>%
+    slice_sample(n = 50) %>%
     ungroup()
   
   # Store results per model type
@@ -144,7 +145,7 @@ for (i in 1:10) {
   all_results[[paste0("Sample_", i)]] <- results
   importance_results[[paste0("Sample_", i)]] <- importances  # Save importance per model per sample
 }
-beep()
+beep(3)
 
 # Save both results and importances
 saveRDS(all_results, file = "E:/Thesis_Final_Data/12species_all_rf_results.rds")
@@ -277,7 +278,7 @@ ggplot(top_vars, aes(x = reorder(Variable, MeanImportance), y = MeanImportance, 
   labs(title = "Top 20 Variables by Mean Decrease Gini",
        x = "Variable", y = "Mean Decrease Gini") +
   theme_minimal()
-#######################################################3
+#######################################################
 
 
 
