@@ -21,23 +21,23 @@ canopies <- spec_chem_canopy %>%
 # --- Keep species with >5 canopies ---
 species_counts <- canopies %>%
   count(SpeciesID) %>%
-  filter(n > 8)
+  filter(n > 5)
 
 canopies_filtered <- canopies %>%
   filter(SpeciesID %in% species_counts$SpeciesID)
 
 # --- Metrics list ---
 metrics <- c(
-  "Boochs", "Boochs2", "CARI", "Carter", "Carter2", "Carter3", "Carter4", "Carter5", "Carter6",
-  "CI", "CI2", "ClAInt", "CRI1", "CRI2", "CRI3", "CRI4", "D1", "D2", "Datt", "Datt2", "Datt3",
-  "Datt4", "Datt5", "Datt6", "DD", "DDn", "DPI", "DWSI4", "EGFN", "EGFR", "EVI", "GDVI2", 
-  "GDVI3", "GDVI4", "GI", "Gitelson", "Gitelson2", "GMI1", "GMI2", "GreenNDVI", "Maccioni",
-  "MCARI", "MCARIOSAVI", "MCARI2", "MCARI2OSAVI2", "mND705", "mNDVI", "MPRI", "MSAVI", "mSR",
-  "mSR2", "mSR705", "MTCI", "MTVI", "NDVI", "NDVI2", "NDVI3", "NPCI", "OSAVI", "OSAVI2", 
-  "PARS", "PRI", "PRICI2", "PRInorm", "PSND", "PSRI", "PSSR", "RDVI", "REPLE", "REPLi",
-  "SAVI", "SIPI", "SPVI", "SR", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SRPI",
-  "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI", 
-  "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4",
+  # "Boochs", "Boochs2", "CARI", "Carter", "Carter2", "Carter3", "Carter4", "Carter5", "Carter6",
+  # "CI", "CI2", "ClAInt", "CRI1", "CRI2", "CRI3", "CRI4", "D1", "D2", "Datt", "Datt2", "Datt3",
+  # "Datt4", "Datt5", "Datt6", "DD", "DDn", "DPI", "DWSI4", "EGFN", "EGFR", "EVI", "GDVI2", 
+  # "GDVI3", "GDVI4", "GI", "Gitelson", "Gitelson2", "GMI1", "GMI2", "GreenNDVI", "Maccioni",
+  # "MCARI", "MCARIOSAVI", "MCARI2", "MCARI2OSAVI2", "mND705", "mNDVI", "MPRI", "MSAVI", "mSR",
+  # "mSR2", "mSR705", "MTCI", "MTVI", "NDVI", "NDVI2", "NDVI3", "NPCI", "OSAVI", "OSAVI2", 
+  # "PARS", "PRI", "PRICI2", "PRInorm", "PSND", "PSRI", "PSSR", "RDVI", "REPLE", "REPLi",
+  # "SAVI", "SIPI", "SPVI", "SR", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SRPI",
+  # "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI", 
+  # "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4",
   "PAD_0_5_off", "PAD_10_15_off", "PAD_15_20_off", "PAD_20_25_off", "PAD_25_30_off",
   "PAD_30_35_off", "PAD_35_40_off", "PAD_40_45_off", "PAD_45_50_off", "PAD_5_10_off",
   "PAD_0_5_on", "PAD_10_15_on", "PAD_15_20_on", "PAD_20_25_on", "PAD_25_30_on",
@@ -56,7 +56,7 @@ for (i in 1:10) {
   # Sample 4 training and 2 test canopies per species
   train_canopies <- canopies_filtered %>%
     group_by(SpeciesID) %>%
-    slice_sample(n = 7) %>%
+    slice_sample(n = 4) %>%
     ungroup()
   
   test_canopies <- anti_join(canopies_filtered, train_canopies, by = "TreeID") %>%
@@ -78,10 +78,10 @@ for (i in 1:10) {
   train_df$SpeciesID <- as.factor(train_df$SpeciesID)
   test_df$SpeciesID <- as.factor(test_df$SpeciesID)
   
-  # Balance training data (50 pixels per canopy)
+  # Balance training data 
   balanced_train_df <- train_df %>%
     group_by(TreeID) %>%
-    slice_sample(n = 100) %>%
+    slice_sample(n = 200) %>%
     ungroup()
   
   # One-vs-rest binary classification
@@ -138,13 +138,13 @@ for (i in 1:10) {
 }
 beep()
 # Optional: save the results
-saveRDS(species_importance_results, "E:/Thesis_Final_Data/species_importance_binary.rds")
+saveRDS(species_importance_results, "E:/Thesis_Final_Data/12species_LiDAR_importance_binary.rds")
 
 
 
 ##########################################################################################
-species_importance_results <- readRDS("E:/Thesis_Final_Data/species_importance_binary.rds")
-beep()
+#species_importance_results <- readRDS("E:/Thesis_Final_Data/species_importance_binary.rds")
+#beep()
 
 # Initialize list to collect rows
 summary_list <- list()
@@ -175,7 +175,7 @@ species_summary_df <- bind_rows(summary_list)
 
 # Save to CSV
 write.csv(species_summary_df,
-          "E:/Thesis_Final_Data/Analysis/8_species_binary_model_summary.csv", row.names = FALSE)
+          "E:/Thesis_Final_Data/Analysis/12_speciesLiDAR_binary_model_summary.csv", row.names = FALSE)
 ############################################################################################
 
 # Initialize list to collect importance data
@@ -251,7 +251,7 @@ for (species_to_plot in all_species) {
   
   # Save plot
   ggsave(
-    filename = paste0(output_dir, "Feature_Importance_", species_to_plot, ".png"),
+    filename = paste0(output_dir, "12Species_LiDARFeature_Importance_", species_to_plot, ".png"),
     plot = p,
     width = 8,
     height = 6,
@@ -277,7 +277,7 @@ selected_features <- c()
 # 3. Track species-wise top features (excluding already selected ones)
 species_list <- unique(species_feature_means$Species)
 
-while (length(selected_features) < 16) {
+while (length(selected_features) < 10) {
   for (sp in species_list) {
     # Filter and sort features for this species (excluding already selected ones)
     sp_feats <- species_feature_means %>%
@@ -289,7 +289,7 @@ while (length(selected_features) < 16) {
       selected_features <- unique(c(selected_features, next_best_feat))
     }
     
-    if (length(selected_features) >= 16) break
+    if (length(selected_features) >= 10) break
   }
 }
 
@@ -302,7 +302,7 @@ final_summary_df <- species_feature_means %>%
 # Optional: Save to CSV
 write.csv(final_summary_df, "E:/Thesis_Final_Data/Analysis/Top25_Feature_Species_MeanImportance.csv", row.names = FALSE)
 
-# 1. Get the 16 selected features
+# 1. Get selected features
 selected_features <- final_summary_df$Feature
 
 # 2. Filter the original per-sample importance_df for only these features
@@ -326,9 +326,9 @@ tree_feature_means$Feature <- factor(tree_feature_means$Feature, levels = featur
 # 6. Plot with features ordered by importance on y-axis
 ggplot(tree_feature_means, aes(x = MeanImportance, y = Feature)) +
   geom_point(aes(color = Species, size = MeanImportance), alpha = 0.8) +
-  scale_size_continuous(range = c(1, 10)) +
+  scale_size_continuous(range = c(2, 8)) +
   labs(
-    title = "Top 16 Features by Species-Tree Mean Importance",
+    title = "Top 10 LiDAR Features by Species Mean Importance",
     x = "Mean Decrease Gini (per sample)",
     y = "Feature (ranked by overall importance)",
     size = "Importance"
@@ -338,3 +338,10 @@ ggplot(tree_feature_means, aes(x = MeanImportance, y = Feature)) +
     axis.text.y = element_text(size = 11),
     legend.position = "right"
   )
+
+
+#########Output Seleeted features########################
+# Assuming `feature_ranking` contains the ranked features
+top_features <- feature_ranking$Feature
+print(top_features)
+
