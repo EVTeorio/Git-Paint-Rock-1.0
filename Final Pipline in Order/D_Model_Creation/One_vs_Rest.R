@@ -10,7 +10,7 @@ library(beepr)
 spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit_no_nas.csv")
 beep()
 str(spec_chem_canopy)
-
+beep()
 # --- Extract unique canopies ---
 canopies <- spec_chem_canopy %>%
   group_by(TreeID) %>%
@@ -21,23 +21,23 @@ canopies <- spec_chem_canopy %>%
 # --- Keep species with >5 canopies ---
 species_counts <- canopies %>%
   count(SpeciesID) %>%
-  filter(n > 5)
+  filter(n > 0)
 
 canopies_filtered <- canopies %>%
   filter(SpeciesID %in% species_counts$SpeciesID)
 
 # --- Metrics list ---
 metrics <- c(
-  # "Boochs", "Boochs2", "CARI", "Carter", "Carter2", "Carter3", "Carter4", "Carter5", "Carter6",
-  # "CI", "CI2", "ClAInt", "CRI1", "CRI2", "CRI3", "CRI4", "D1", "D2", "Datt", "Datt2", "Datt3",
-  # "Datt4", "Datt5", "Datt6", "DD", "DDn", "DPI", "DWSI4", "EGFN", "EGFR", "EVI", "GDVI2", 
-  # "GDVI3", "GDVI4", "GI", "Gitelson", "Gitelson2", "GMI1", "GMI2", "GreenNDVI", "Maccioni",
-  # "MCARI", "MCARIOSAVI", "MCARI2", "MCARI2OSAVI2", "mND705", "mNDVI", "MPRI", "MSAVI", "mSR",
-  # "mSR2", "mSR705", "MTCI", "MTVI", "NDVI", "NDVI2", "NDVI3", "NPCI", "OSAVI", "OSAVI2", 
-  # "PARS", "PRI", "PRICI2", "PRInorm", "PSND", "PSRI", "PSSR", "RDVI", "REPLE", "REPLi",
-  # "SAVI", "SIPI", "SPVI", "SR", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SRPI",
-  # "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI", 
-  # "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4",
+  "Boochs", "Boochs2", "CARI", "Carter", "Carter2", "Carter3", "Carter4", "Carter5", "Carter6",
+  "CI", "CI2", "ClAInt", "CRI1", "CRI2", "CRI3", "CRI4", "D1", "D2", "Datt", "Datt2", "Datt3",
+  "Datt4", "Datt5", "Datt6", "DD", "DDn", "DPI", "DWSI4", "EGFN", "EGFR", "EVI", "GDVI2",
+  "GDVI3", "GDVI4", "GI", "Gitelson", "Gitelson2", "GMI1", "GMI2", "GreenNDVI", "Maccioni",
+  "MCARI", "MCARIOSAVI", "MCARI2", "MCARI2OSAVI2", "mND705", "mNDVI", "MPRI", "MSAVI", "mSR",
+  "mSR2", "mSR705", "MTCI", "MTVI", "NDVI", "NDVI2", "NDVI3", "NPCI", "OSAVI", "OSAVI2",
+  "PARS", "PRI", "PRICI2", "PRInorm", "PSND", "PSRI", "PSSR", "RDVI", "REPLE", "REPLi",
+  "SAVI", "SIPI", "SPVI", "SR", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SRPI",
+  "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI",
+  "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4",
   "PAD_0_5_off", "PAD_10_15_off", "PAD_15_20_off", "PAD_20_25_off", "PAD_25_30_off",
   "PAD_30_35_off", "PAD_35_40_off", "PAD_40_45_off", "PAD_45_50_off", "PAD_5_10_off",
   "PAD_0_5_on", "PAD_10_15_on", "PAD_15_20_on", "PAD_20_25_on", "PAD_25_30_on",
@@ -67,6 +67,12 @@ for (i in 1:10) {
   # Get training/test pixel data
   train_df <- spec_chem_canopy %>%
     filter(TreeID %in% train_canopies$TreeID)
+  
+  #if more than 4 canopies selected set to number of samples in training data
+  # train_df <- train_pixels %>%
+  #   group_by(SpeciesID) %>%
+  #   slice_sample(n = 800) %>%
+  #   ungroup()
   
   test_df <- spec_chem_canopy %>%
     filter(TreeID %in% test_canopies$TreeID) %>%

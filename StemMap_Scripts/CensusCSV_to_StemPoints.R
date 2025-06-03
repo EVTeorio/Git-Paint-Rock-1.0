@@ -13,7 +13,7 @@ df <- read.csv(csv_file)
 
 # Filter rows where "crown position" is 3, 4, or 5, and "status 2024" is "A"
 df_filtered <- df %>%
-  filter(`crown.position` %in% c(3, 4, 5), `status.2024` == "A")
+  filter(`crown.position` %in% c( 1, 2, 3, 4, 5), `status.2024` == "A")
 
 # Keep only the desired columns
 df_filtered_crown_position <- df_filtered %>%
@@ -29,7 +29,8 @@ sf_points <- st_as_sf(df_filtered_crown_position, coords = c("long", "lat"), crs
 plot(sf_points)
 
 # Step 5: Save as a shapefile#Required to convert to Stem map
-shapefile_output <- "E:/BASE_PR_20/Updated Census/StemMap_4_28.shp"  # Replace with your desired output file path
+shapefile_output <- "E:/BASE_PR_20/Updated Census/AllStems_6_3.shp"
 st_write(sf_points, shapefile_output)
 
 cat("Shapefile created successfully.")
+beep()
