@@ -10,7 +10,7 @@ library(beepr)
 spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit_no_nas.csv")
 beep()
 str(spec_chem_canopy)
-beep()
+
 # --- Extract unique canopies ---
 canopies <- spec_chem_canopy %>%
   group_by(TreeID) %>%
@@ -21,7 +21,7 @@ canopies <- spec_chem_canopy %>%
 # --- Keep species with >5 canopies ---
 species_counts <- canopies %>%
   count(SpeciesID) %>%
-  filter(n > 0)
+  filter(n > 5)
 
 canopies_filtered <- canopies %>%
   filter(SpeciesID %in% species_counts$SpeciesID)
@@ -39,9 +39,9 @@ metrics <- c(
   "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI",
   "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4",
   "PAD_0_5_off", "PAD_10_15_off", "PAD_15_20_off", "PAD_20_25_off", "PAD_25_30_off",
-  "PAD_30_35_off", "PAD_35_40_off", "PAD_40_45_off", "PAD_45_50_off", "PAD_5_10_off",
+  "PAD_30_35_off", "PAD_35_40_off", "PAD_5_10_off",
   "PAD_0_5_on", "PAD_10_15_on", "PAD_15_20_on", "PAD_20_25_on", "PAD_25_30_on",
-  "PAD_30_35_on", "PAD_35_40_on", "PAD_40_45_on", "PAD_45_50_on", "PAD_5_10_on",
+  "PAD_30_35_on", "PAD_35_40_on","PAD_5_10_on",
   "Seasonal_Occupancy_20_35m"
 )
 
@@ -77,7 +77,7 @@ for (i in 1:10) {
   test_df <- spec_chem_canopy %>%
     filter(TreeID %in% test_canopies$TreeID) %>%
     group_by(TreeID) %>%
-    slice_sample(n = 200) %>%
+    slice_sample(n = 300) %>%
     ungroup()
   
   # Make sure species are factors
@@ -87,7 +87,7 @@ for (i in 1:10) {
   # Balance training data 
   balanced_train_df <- train_df %>%
     group_by(TreeID) %>%
-    slice_sample(n = 200) %>%
+    slice_sample(n = 150) %>%
     ungroup()
   
   # One-vs-rest binary classification
@@ -144,13 +144,13 @@ for (i in 1:10) {
 }
 beep()
 # Optional: save the results
-saveRDS(species_importance_results, "E:/Thesis_Final_Data/12species_LiDAR_importance_binary.rds")
+saveRDS(species_importance_results, "E:/Thesis_Final_Data/12species_importance_binary.rds")
 
 
 
 ##########################################################################################
-#species_importance_results <- readRDS("E:/Thesis_Final_Data/species_importance_binary.rds")
-#beep()
+species_importance_results <- readRDS("E:/Thesis_Final_Data/12species_importance_binary.rds")
+beep()
 
 # Initialize list to collect rows
 summary_list <- list()
@@ -181,7 +181,7 @@ species_summary_df <- bind_rows(summary_list)
 
 # Save to CSV
 write.csv(species_summary_df,
-          "E:/Thesis_Final_Data/Analysis/12_speciesLiDAR_binary_model_summary.csv", row.names = FALSE)
+          "E:/Thesis_Final_Data/Analysis/12_species_binary_model_summary.csv", row.names = FALSE)
 ############################################################################################
 
 # Initialize list to collect importance data
@@ -210,7 +210,7 @@ for (sample_name in names(species_importance_results)) {
 # Combine into one data frame for plotting
 importance_df <- bind_rows(importance_list)
 
-write.csv(importance_df, "E:/Thesis_Final_Data/Analysis/8_species_feature_importance_long.csv", row.names = FALSE)
+write.csv(importance_df, "E:/Thesis_Final_Data/Analysis/12species_feature_importance_long.csv", row.names = FALSE)
 
 
 # Create output folder if needed
@@ -257,7 +257,7 @@ for (species_to_plot in all_species) {
   
   # Save plot
   ggsave(
-    filename = paste0(output_dir, "12Species_LiDARFeature_Importance_", species_to_plot, ".png"),
+    filename = paste0(output_dir, "12Species_Feature_Importance_binary", species_to_plot, ".png"),
     plot = p,
     width = 8,
     height = 6,
@@ -283,7 +283,7 @@ selected_features <- c()
 # 3. Track species-wise top features (excluding already selected ones)
 species_list <- unique(species_feature_means$Species)
 
-while (length(selected_features) < 10) {
+while (length(selected_features) < 24) {
   for (sp in species_list) {
     # Filter and sort features for this species (excluding already selected ones)
     sp_feats <- species_feature_means %>%
@@ -295,7 +295,7 @@ while (length(selected_features) < 10) {
       selected_features <- unique(c(selected_features, next_best_feat))
     }
     
-    if (length(selected_features) >= 10) break
+    if (length(selected_features) >= 24) break
   }
 }
 
@@ -305,8 +305,8 @@ final_summary_df <- species_feature_means %>%
   tidyr::pivot_wider(names_from = Species, values_from = MeanImportance) %>%
   arrange(match(Feature, selected_features))  # Preserve feature selection order
 
-# Optional: Save to CSV
-write.csv(final_summary_df, "E:/Thesis_Final_Data/Analysis/Top25_Feature_Species_MeanImportance.csv", row.names = FALSE)
+# Save to CSV
+write.csv(final_summary_df, "E:/Thesis_Final_Data/Analysis/Top24_Feature_Species_MeanImportance_binary.csv", row.names = FALSE)
 
 # 1. Get selected features
 selected_features <- final_summary_df$Feature
@@ -334,7 +334,7 @@ ggplot(tree_feature_means, aes(x = MeanImportance, y = Feature)) +
   geom_point(aes(color = Species, size = MeanImportance), alpha = 0.8) +
   scale_size_continuous(range = c(2, 8)) +
   labs(
-    title = "Top 10 LiDAR Features by Species Mean Importance",
+    title = "Top 24 Features by Species Mean Importance",
     x = "Mean Decrease Gini (per sample)",
     y = "Feature (ranked by overall importance)",
     size = "Importance"
@@ -344,7 +344,6 @@ ggplot(tree_feature_means, aes(x = MeanImportance, y = Feature)) +
     axis.text.y = element_text(size = 11),
     legend.position = "right"
   )
-
 
 #########Output Seleeted features########################
 # Assuming `feature_ranking` contains the ranked features
