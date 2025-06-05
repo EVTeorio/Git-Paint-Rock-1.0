@@ -1,154 +1,6 @@
 
+importance_results <- readRDS("E:/Results/Full_RF_importance_all_metrics.rds")
 
-
-library(dplyr)
-library(stringr)
-library(randomForest)
-library(caret)
-library(beepr)
-library(tibble)
-library(tidyverse)
-
-# Load data
-spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit_no_nas.csv")
-beep()
-str(spec_chem_canopy)
-
-# Get canopy and species info
-canopies <- spec_chem_canopy %>%
-  group_by(TreeID) %>%
-  slice(1) %>%
-  ungroup() %>%
-  select(TreeID, SpeciesID)
-
-# Calculate species counts from all canopies (for training filter)
-species_counts <- canopies %>%
-  count(SpeciesID)
-
-# Species with >8 canopies for training only
-species_for_training <- species_counts %>%
-  filter(n > 5) %>%
-  pull(SpeciesID)
-
-# Define metrics
-metrics <- c(
-  "Boochs", "Boochs2", "CARI", "Carter", "Carter2", "Carter3", "Carter4", "Carter5", "Carter6",
-  "CI", "CI2", "ClAInt", "CRI1", "CRI2", "CRI3", "CRI4", "D1", "D2", "Datt", "Datt2", "Datt3",
-  "Datt4", "Datt5", "Datt6", "DD", "DDn", "DPI", "DWSI4", "EGFN", "EGFR", "EVI", "GDVI2",
-  "GDVI3", "GDVI4", "GI", "Gitelson", "Gitelson2", "GMI1", "GMI2", "GreenNDVI", "Maccioni",
-  "MCARI", "MCARIOSAVI", "MCARI2", "MCARI2OSAVI2", "mND705", "mNDVI", "MPRI", "MSAVI", "mSR",
-  "mSR2", "mSR705", "MTCI", "MTVI", "NDVI", "NDVI2", "NDVI3", "NPCI", "OSAVI", "OSAVI2",
-  "PARS", "PRI", "PRICI2", "PRInorm", "PSND", "PSRI", "PSSR", "RDVI", "REPLE", "REPLi",
-  "SAVI", "SIPI", "SPVI", "SR", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SRPI",
-  "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI",
-  "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4",
-  "PAD_0_5_off", "PAD_10_15_off", "PAD_15_20_off", "PAD_20_25_off", "PAD_25_30_off",
-  "PAD_30_35_off", "PAD_35_40_off", "PAD_5_10_off",
-  "PAD_0_5_on", "PAD_10_15_on", "PAD_15_20_on", "PAD_20_25_on", "PAD_25_30_on",
-  "PAD_30_35_on", "PAD_35_40_on","PAD_5_10_on",
-  "Seasonal_Occupancy_20_35m"
-)
-
-# Precompute canopy-averaged data for all canopies (all species included)
-canopy_means <- spec_chem_canopy %>%
-  group_by(TreeID, SpeciesID) %>%
-  summarise(across(all_of(metrics), mean, na.rm = TRUE), .groups = "drop")
-
-all_results <- list()
-importance_results <- list()
-
-for (i in 1:10) {
-  cat("\n--- Object-Based Sample", i, "---\n")
-  set.seed(100 + i)
-  
-  # Training canopies sampled only from species with >8 canopies
-  train_canopies <- canopy_means %>%
-    filter(SpeciesID %in% species_for_training) %>%
-    group_by(SpeciesID) %>%
-    slice_sample(prop = 0.7) %>%
-    ungroup()
-  
-  # Testing canopies are all other canopies excluding training canopies (all species)
-  test_canopies <- canopy_means %>%
-    filter(!TreeID %in% train_canopies$TreeID) %>%
-    ungroup()
-  
-  train_canopies$SpeciesID <- as.factor(train_canopies$SpeciesID)
-  test_canopies$SpeciesID <- as.factor(test_canopies$SpeciesID)
-  
-  # Prepare data frames for model
-  train_data <- train_canopies %>%
-    select(SpeciesID, all_of(metrics))
-  
-  test_data <- test_canopies %>%
-    select(SpeciesID, all_of(metrics))
-  
-  # Train Random Forest model
-  rf_model <- randomForest(SpeciesID ~ ., data = train_data, ntree = 3000, importance = TRUE)
-  
-  # Predict on test data
-  preds <- predict(rf_model, newdata = test_data)
-  
-  # Evaluate performance
-  cm <- confusionMatrix(preds, test_data$SpeciesID)
-  
-  precision <- cm$byClass[, "Precision"]
-  recall <- cm$byClass[, "Recall"]
-  f1_by_class <- 2 * (precision * recall) / (precision + recall)
-  f1_macro <- mean(f1_by_class, na.rm = TRUE)
-  
-  # Store results
-  all_results[[paste0("Sample_", i)]] <- list(
-    model = rf_model,
-    confusion = cm,
-    accuracy = cm$overall["Accuracy"],
-    f1_by_class = f1_by_class,
-    f1_macro = f1_macro
-  )
-  
-  importance_results[[paste0("Sample_", i)]] <- importance(rf_model)
-}
-
-beep(3)
-saveRDS(species_importance_results, "E:/Results/Unbalanced_object_based_results.rds")
-
-#######################################################################3
-
-summary_list <- list()
-
-for (sample_name in names(all_results)) {
-  res <- all_results[[sample_name]]
-  cm <- res$confusion
-  
-  # cm$byClass rows correspond to species in order (usually alphabetical)
-  species_names <- rownames(cm$byClass)
-  
-  # For each species, extract metrics
-  for (sp in species_names) {
-    precision <- cm$byClass[sp, "Precision"]
-    recall <- cm$byClass[sp, "Recall"]
-    f1 <- 2 * (precision * recall) / (precision + recall)
-    accuracy <- as.numeric(res$accuracy)  # overall accuracy
-    
-    row <- data.frame(
-      Sample = sample_name,
-      Species = sp,
-      Accuracy = accuracy,
-      Precision = precision,
-      Recall = recall,
-      F1 = f1,
-      stringsAsFactors = FALSE
-    )
-    summary_list[[paste(sample_name, sp, sep = "_")]] <- row
-  }
-}
-
-species_summary_df <- bind_rows(summary_list)
-
-write.csv(species_summary_df,
-          "E:/Thesis_Final_Data/Analysis/object_based_model_summary_per_species.csv",
-          row.names = FALSE)
-##############################################################################3
 
 # Process and clean importance results
 species_importance_df <- map_dfr(
@@ -170,7 +22,7 @@ species_importance_df <- map_dfr(
 )
 
 # Save to CSV (optional)
-write.csv(species_importance_df, "species_feature_importance_by_sample.csv", row.names = FALSE)
+write.csv(species_importance_df, "E:/Results/species_feature_importance_by_sample.csv", row.names = FALSE)
 
 # Preview the data
 print(species_importance_df, n = 100)
@@ -240,8 +92,6 @@ for (species_to_plot in all_species) {
     height = 6,
     dpi = 300
   )
-  
-  message("✅ Saved feature importance plot for species: ", species_to_plot)
 }
 ###################################################################
 
@@ -322,5 +172,4 @@ ggplot(tree_feature_means, aes(x = MeanImportance, y = Feature)) +
     color = guide_legend(override.aes = list(size = 6)),  # Larger color dots in legend
     size = guide_legend(override.aes = list(shape = 16))
   )
-
-
+print(selected_features)

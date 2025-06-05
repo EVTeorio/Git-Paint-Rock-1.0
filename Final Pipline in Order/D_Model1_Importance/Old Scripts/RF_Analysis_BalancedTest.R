@@ -39,16 +39,15 @@ vi_vars <- c(
   "SAVI", "SIPI", "SPVI", "SR", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SRPI",
   "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI",
   "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4",
-  "PAD_0_5_off", "PAD_10_15_off", "PAD_15_20_off", "PAD_20_25_off", "PAD_25_30_off",
-  "PAD_30_35_off", "PAD_35_40_off", "PAD_5_10_off",
-  "PAD_0_5_on", "PAD_10_15_on", "PAD_15_20_on", "PAD_20_25_on", "PAD_25_30_on",
-  "PAD_30_35_on", "PAD_35_40_on","PAD_5_10_on",
-  "Seasonal_Occupancy_20_35m"
 )
 
 # Identify LiDAR variables
-leafon_vars <- colnames(spec_chem_canopy)[str_detect(colnames(spec_chem_canopy), "PAD_\\d+_\\d+_on")]
-leafoff_vars <- colnames(spec_chem_canopy)[str_detect(colnames(spec_chem_canopy), "PAD_\\d+_\\d+_off")]
+leafon_vars <- c("PAD_0_5_on", "PAD_10_15_on", "PAD_15_20_on", "PAD_20_25_on", "PAD_25_30_on",
+                 "PAD_30_35_on", "PAD_35_40_on","PAD_5_10_on")
+
+leafoff_vars <- c("PAD_0_5_off", "PAD_10_15_off", "PAD_15_20_off", "PAD_20_25_off", "PAD_25_30_off",
+                  "PAD_30_35_off", "PAD_35_40_off", "PAD_5_10_off")
+
 seasonal_var <- "Seasonal_Occupancy_20_35m"
 
 # Define model inputs
@@ -58,7 +57,6 @@ model_inputs <- list(
   VIs_LiDARleafoff = c(vi_vars, leafoff_vars),
   VIs_allLiDAR = c(vi_vars, leafon_vars, leafoff_vars, seasonal_var)
 )
-
 # Store results from 10 repetitions
 all_results <- list()
 importance_results <- list()  # New list to store variable importance
