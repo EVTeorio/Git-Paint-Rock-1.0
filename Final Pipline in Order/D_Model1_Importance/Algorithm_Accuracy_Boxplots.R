@@ -1,5 +1,5 @@
 
-grouped_accuracy_results <- readRDS("E:/Results/Grouped_RF_accuracy_only.rds")
+grouped_accuracy_results <- readRDS("E:/Results/Balanced_Grouped_RF_accuracy_only.rds")
 
 summary_list <- list()
 
@@ -50,13 +50,25 @@ summary_df[num_cols] <- lapply(summary_df[num_cols], as.numeric)
 
 # View summary
 print(summary_df)
+
+##############################################################################
+model_means <- summary_df %>%
+  group_by(Model) %>%
+  summarise(
+    Mean_Accuracy = round(mean(Accuracy, na.rm = TRUE), 3),
+    Mean_F1_Macro = round(mean(F1_Macro, na.rm = TRUE), 3)
+  ) %>%
+  arrange(Model)
+
+print(model_means)
+
 ##############################################################################
 
 # Accuracy boxplot across models
 ggplot(summary_df %>% distinct(Sample, Model, Accuracy), 
        aes(x = Model, y = Accuracy)) +
   geom_boxplot(fill = "#69b3a2") +
-  labs(title = "Accuracy by Model Across 10 Samples",
+  labs(title = "Accuracy by Model Across 100 Samples",
        x = "Model Type", y = "Accuracy") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -65,7 +77,7 @@ ggplot(summary_df %>% distinct(Sample, Model, Accuracy),
 ggplot(summary_df %>% distinct(Sample, Model, F1_Macro), 
        aes(x = Model, y = F1_Macro)) +
   geom_boxplot(fill = "#69b3a2") +
-  labs(title = "F1 by Model Across 10 Samples",
+  labs(title = "F1 by Model Across 100 Samples",
        x = "Model Type", y = "F1_Macro") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -92,7 +104,7 @@ for (sample_name in names(grouped_accuracy_results)) {
     
     # Extract confusion matrix table
     cm_table <- result$confusion$table
-    cm_file <- file.path(output_dir, paste0(sample_name, "_", model_name, "_12species_confusion.csv"))
+    cm_file <- file.path(output_dir, paste0(sample_name, "_", model_name, "4Species_Balanced_confusion.csv"))
     write.csv(as.table(cm_table), cm_file)
   }
 }

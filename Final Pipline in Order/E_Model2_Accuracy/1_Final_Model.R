@@ -5,7 +5,7 @@ library(caret)
 library(tidyr)
 library(stringr)
 library(beepr)
-beep(3)
+beep()
 
 
 # Step 1–2: Your preprocessing steps remain the same
@@ -35,7 +35,7 @@ species_for_training <- canopy_summary %>%
 # Prepare list for results
 iter_results <- list()
 
-for (i in 1:500) {
+for (i in 1:50) {
   set.seed(50 + i)
   cat(sprintf("\nIteration %d\n", i))
   
@@ -116,4 +116,4 @@ for (i in 1:500) {
 }
 beep()
 
-saveRDS(iter_results, file = "iter_results_500.rds")
+saveRDS(iter_results, file = "E:/Results/Final_Model.rds")

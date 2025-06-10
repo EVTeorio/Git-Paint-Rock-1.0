@@ -1,6 +1,7 @@
 
 
 PRstem <- read.csv("E:/BASE_PR_20/Updated Census/ALL 25 data with issues.csv")
+
 splist <- as.data.frame(unique(PRstem$sp))
 
 #group species data for analysis,  

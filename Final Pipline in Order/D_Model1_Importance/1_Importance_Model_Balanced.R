@@ -13,21 +13,13 @@ spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit_no_na
 beep()
 str(spec_chem_canopy)
 
+
 # Get canopy and species info
 canopies <- spec_chem_canopy %>%
   group_by(TreeID) %>%
   slice(1) %>%
   ungroup() %>%
   select(TreeID, SpeciesID)
-
-# Calculate species counts from all canopies (for training filter)
-species_counts <- canopies %>%
-  count(SpeciesID)
-
-# Species with canopies for training only
-species_for_training <- species_counts %>%
-  filter(n > 5) %>%
-  pull(SpeciesID)
 
 # Define metrics
 metrics <- c(
@@ -71,7 +63,6 @@ leafoff_vars <- c("PAD_0_5_off", "PAD_10_15_off", "PAD_15_20_off", "PAD_20_25_of
 
 seasonal_var <- "Seasonal_Occupancy_20_35m"
 
-# Define model input groups
 model_inputs <- list(
   VIs_only = vi_vars,
   VIs_LiDARleafon = c(vi_vars, leafon_vars),
@@ -79,44 +70,65 @@ model_inputs <- list(
   VIs_allLiDAR = c(vi_vars, leafon_vars, leafoff_vars, seasonal_var)
 )
 
-# Precompute canopy-averaged data for all canopies (all species included)
+# Average metrics by canopy
 canopy_means <- spec_chem_canopy %>%
   group_by(TreeID, SpeciesID) %>%
   summarise(across(all_of(metrics), mean, na.rm = TRUE), .groups = "drop")
 
-# Precompute canopy-averaged data for each feature group
+# Precompute canopy means for model input groups
 grouped_canopy_means <- list()
-
 for (group_name in names(model_inputs)) {
   grouped_canopy_means[[group_name]] <- spec_chem_canopy %>%
     group_by(TreeID, SpeciesID) %>%
     summarise(across(all_of(model_inputs[[group_name]]), mean, na.rm = TRUE), .groups = "drop")
 }
 
+# Store results
 all_results <- list()
 importance_results <- list()
 grouped_accuracy_results <- list()
 
-for (i in 1:100) {
+for (i in 1:50) {
   cat("\n--- Object-Based Sample", i, "---\n")
   set.seed(50 + i)
   
-  # Sample training TreeIDs from species with enough samples
-  train_canopies <- canopy_means %>%
-    filter(SpeciesID %in% species_for_training) %>%
+  # Select species with ≥6 canopies
+  species_counts <- canopy_means %>%
+    count(SpeciesID)
+  
+  eligible_species <- species_counts %>%
+    filter(n >= 18) %>%
+    pull(SpeciesID)
+  
+  # Sample canopies per eligible species
+  sampled <- canopy_means %>%
+    filter(SpeciesID %in% eligible_species) %>%
     group_by(SpeciesID) %>%
-    slice_sample(prop = 0.7) %>%
+    slice_sample(n = 18) %>%
     ungroup()
   
-  test_canopies <- canopy_means %>%
-    filter(!TreeID %in% train_canopies$TreeID) %>%
+  # Use for training
+  train_canopies <- sampled %>%
+    group_by(SpeciesID) %>%
+    slice_sample(n = 10) %>%
     ungroup()
+  
+  # Remaining from sampled species for testing
+  sampled_test_canopies <- sampled %>%
+    filter(!TreeID %in% train_canopies$TreeID)
+  
+  # All other species (with <6 canopies) added to test set
+  rare_species_test_canopies <- canopy_means %>%
+    filter(!(SpeciesID %in% eligible_species))
+
+  # Final test set
+  test_canopies <- bind_rows(sampled_test_canopies, rare_species_test_canopies)
   
   train_treeIDs <- train_canopies$TreeID
   test_treeIDs <- test_canopies$TreeID
   
   # ============================
-  # Primary RF using all metrics
+  # Full model with all metrics
   # ============================
   
   train_data_full <- train_canopies %>%
@@ -130,7 +142,8 @@ for (i in 1:100) {
   train_data_full$SpeciesID <- as.factor(train_data_full$SpeciesID)
   test_data_full$SpeciesID <- factor(test_data_full$SpeciesID, levels = levels(train_data_full$SpeciesID))
   
-  rf_model_full <- randomForest(SpeciesID ~ ., data = train_data_full, ntree = 3000, importance = TRUE)
+  rf_model_full <- 
+    randomForest(SpeciesID ~ ., data = train_data_full, ntree = 3000, importance = TRUE)
   preds_full <- predict(rf_model_full, newdata = test_data_full)
   cm_full <- confusionMatrix(preds_full, test_data_full$SpeciesID)
   
@@ -194,6 +207,9 @@ for (i in 1:100) {
 }
 
 beep()
-saveRDS(all_results, "E:/Results/Full_RF_results_all_metrics.rds")
-saveRDS(importance_results, "E:/Results/Full_RF_importance_all_metrics.rds")
-saveRDS(grouped_accuracy_results, "E:/Results/Grouped_RF_accuracy_only.rds")
+
+saveRDS(all_results, "E:/Results/Balanaced_Full_RF_results_all_metrics.rds")
+saveRDS(importance_results, "E:/Results/Balanced_Full_RF_importance_all_metrics.rds")
+saveRDS(grouped_accuracy_results, "E:/Results/Balanced_Grouped_RF_accuracy_only.rds")
+
+
