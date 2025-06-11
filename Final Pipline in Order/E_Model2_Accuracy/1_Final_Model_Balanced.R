@@ -140,7 +140,8 @@ for (group_name in names(model_inputs)) {
       macro_f1 = macro_f1,
       f1_per_class = f1_scores,
       results = results_df,
-      confidence = confidence
+      confidence = confidence,
+      confusion_matrix = cm
     )
   }
   

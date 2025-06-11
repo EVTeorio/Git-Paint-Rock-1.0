@@ -2,6 +2,66 @@
 
 importance_results <- readRDS("E:/Results/Balanced_Full_RF_importance_all_metrics.rds")
 
+library(dplyr)
+library(purrr)
+library(tibble)
+library(tidyr)
+library(ggplot2)
+
+# Step 1: Extract MeanDecreaseAccuracy per feature from each sample
+mda_df <- map_dfr(
+  .x = names(importance_results),
+  .f = function(sample_name) {
+    df <- as.data.frame(importance_results[[sample_name]])
+    tibble(
+      Feature = rownames(df),
+      MeanDecreaseAccuracy = df$MeanDecreaseAccuracy,
+      Sample = sample_name
+    )
+  }
+)
+
+# Step 2: Identify top 30 features by average importance
+top_features <- mda_df %>%
+  group_by(Feature) %>%
+  summarise(AvgMDA = mean(MeanDecreaseAccuracy, na.rm = TRUE), .groups = "drop") %>%
+  top_n(30, AvgMDA) %>%
+  pull(Feature)
+
+# Step 3: Filter the main data to include only top features
+mda_top30 <- mda_df %>%
+  filter(Feature %in% top_features)
+
+# Step 4: Plot with flipped axes
+ggplot(mda_top30, aes(y = reorder(Feature, MeanDecreaseAccuracy, FUN = mean), x = MeanDecreaseAccuracy)) +
+  geom_boxplot(outlier.alpha = 0.3) +
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2.5, fill = "red", color = "black") +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Top 30 Features by MeanDecreaseAccuracy",
+    y = "Feature",
+    x = "MeanDecreaseAccuracy",
+    caption = "Red dots indicate mean across samples"
+  )
+
+# Step 1: Calculate average MeanDecreaseAccuracy for each feature
+top30_summary <- mda_df %>%
+  group_by(Feature) %>%
+  summarise(AvgMDA = mean(MeanDecreaseAccuracy, na.rm = TRUE), .groups = "drop") %>%
+  #top_n(30, AvgMDA) %>%
+  arrange(desc(AvgMDA))  # Arrange for prettier bar plot
+
+# Step 2: Create bar plot
+ggplot(top30_summary, aes(x = reorder(Feature, AvgMDA), y = AvgMDA)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Top 30 Features by Average MeanDecreaseAccuracy",
+    x = "Feature",
+    y = "Average MeanDecreaseAccuracy"
+  )
+#############################################################################
 
 # Process and clean importance results
 species_importance_df <- map_dfr(
@@ -22,11 +82,8 @@ species_importance_df <- map_dfr(
   }
 )
 
-# Save to CSV (optional)
-write.csv(species_importance_df, "E:/Results/species_feature_importance_by_sample.csv", row.names = FALSE)
-
 # Preview the data
-print(species_importance_df, n = 100)
+print(species_importance_df, n = 20)
 ##########################################################################
 ######## Selecting top importance metrics##########################
 # 1. Calculate mean importance per feature per species
@@ -36,10 +93,17 @@ species_feature_means <- species_importance_df %>%
 
 # Convert species_feature_means to wide format: species as rows, features as columns
 feature_matrix <- species_feature_means %>%
-  pivot_wider(names_from = Feature, values_from = MeanImportance)
+  pivot_wider(names_from = SpeciesID, values_from = MeanImportance)
 
 
+# Join top30_summary with feature_matrix by Feature
+combined_df <- left_join(feature_matrix, top30_summary, by = "Feature")
 
+# View the result
+print(combined_df)
+
+# Save to CSV (optional)
+write.csv(combined_df, "E:/Results/species_feature_importance_by_sample.csv", row.names = FALSE)
 
 # 2. Initialize empty vector for selected features
 selected_features <- c()

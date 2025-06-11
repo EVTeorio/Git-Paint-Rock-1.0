@@ -71,6 +71,7 @@ ggplot(summary_df %>% distinct(Group, Iteration, Accuracy),
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+
 # F1 boxplot across groups
 ggplot(summary_df %>% distinct(Group, Iteration, F1_Macro), 
        aes(x = Group, y = F1_Macro)) +
@@ -78,7 +79,25 @@ ggplot(summary_df %>% distinct(Group, Iteration, F1_Macro),
   labs(title = "Macro F1 by Group Across Iterations",
        x = "Group", y = "F1_Macro") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_y_continuous(limits = c(0.5, 1), expand = c(0, 0))
+##############################################################################
+
+# Ensure numeric columns are treated as such
+numeric_cols <- c("Accuracy", "F1_Macro", "F1_FRAMCO", "F1_LITU", "F1_PIEC2", "F1_QUAL")
+summary_df[numeric_cols] <- lapply(summary_df[numeric_cols], as.numeric)
+
+# Summarize mean and standard deviation by Group
+summary_stats <- summary_df %>%
+  group_by(Group) %>%
+  summarise(across(all_of(numeric_cols),
+                   list(mean = ~mean(. , na.rm = TRUE),
+                        sd = ~sd(. , na.rm = TRUE)),
+                   .names = "{.col}_{.fn}"))
+
+# View result
+print(summary_stats, n = Inf, width = Inf)
+
 
 ##############################################################################
 # box plot per species/class F1
