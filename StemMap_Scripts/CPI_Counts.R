@@ -3,11 +3,15 @@ library(dplyr)
 
 
 # Read in data
-PRstem <- read.csv("E:/BASE_PR_20/Updated Census/ALLstems.csv")
+PRstem <- read.csv("D:/BASE_PR_20/Updated Census/ALLstems.csv")
 str(PRstem)
 # Ensure crown.position is numeric
 PRstem$crown.position <- as.numeric(PRstem$crown.position)
 PRstem <- PRstem[PRstem$x >= -86.30800, ]
+
+# Count species
+species_counts <- PRstem %>%
+  count(sp)
 
 # Remove stems with crown.position == 3 and dbh.2024 <= 400
 subset_dbh_3 <- PRstem[!(PRstem$crown.position == 3 & PRstem$DBH.2024 <= 400), ]

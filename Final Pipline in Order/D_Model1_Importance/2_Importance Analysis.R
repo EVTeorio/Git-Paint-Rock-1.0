@@ -48,7 +48,7 @@ ggplot(mda_top30, aes(y = reorder(Feature, MeanDecreaseAccuracy, FUN = mean), x 
 top30_summary <- mda_df %>%
   group_by(Feature) %>%
   summarise(AvgMDA = mean(MeanDecreaseAccuracy, na.rm = TRUE), .groups = "drop") %>%
-  #top_n(30, AvgMDA) %>%
+  #top_n(20, AvgMDA) %>%
   arrange(desc(AvgMDA))  # Arrange for prettier bar plot
 
 # Step 2: Create bar plot
@@ -100,7 +100,7 @@ feature_matrix <- species_feature_means %>%
 combined_df <- left_join(feature_matrix, top30_summary, by = "Feature")
 
 # View the result
-print(combined_df)
+print(n=30,combined_df)
 
 # Save to CSV (optional)
 write.csv(combined_df, "E:/Results/species_feature_importance_by_sample.csv", row.names = FALSE)
