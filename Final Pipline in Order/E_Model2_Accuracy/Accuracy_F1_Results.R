@@ -1,5 +1,4 @@
 
-
 summary_list <- list()
 
 # Loop over groups and iterations in Final_grouped_results
@@ -12,6 +11,7 @@ for (group_name in names(Final_grouped_results)) {
     # Extract metrics
     accuracy <- if (!is.null(res$accuracy)) res$accuracy else NA
     macro_f1 <- if (!is.null(res$macro_f1)) res$macro_f1 else NA
+    kappa <- if (!is.null(res$kappa)) res$kappa else NA
     
     # Extract per-class F1 and rename columns (remove prefix if any)
     if (!is.null(res$f1_per_class) && length(res$f1_per_class) > 0) {
@@ -28,41 +28,42 @@ for (group_name in names(Final_grouped_results)) {
       Iteration = iter_name,
       Accuracy = accuracy,
       F1_Macro = macro_f1,
+      Kappa = kappa,
       class_f1
     )
     
-    # Convert row to data.frame and add to list
     summary_list[[paste(group_name, iter_name, sep = "_")]] <- as.data.frame(t(row), stringsAsFactors = FALSE)
   }
 }
 
-# Combine all rows into one summary dataframe
+# Combine into a summary dataframe
 summary_df <- do.call(rbind, summary_list)
 
-# Convert numeric columns to numeric type
+# Convert numeric columns
 num_cols <- setdiff(names(summary_df), c("Group", "Iteration"))
 summary_df[num_cols] <- lapply(summary_df[num_cols], as.numeric)
 
-# Print summary
+# Print
 print(summary_df)
 
 ##############################################################################
-# Calculate mean accuracy and macro F1 per group (or per model if you rename 'Group' to 'Model')
+# Group-wise summary stats
 model_means <- summary_df %>%
   group_by(Group) %>%
   summarise(
     Mean_Accuracy = round(mean(Accuracy, na.rm = TRUE), 3),
     Median_Accuracy = round(median(Accuracy, na.rm = TRUE), 3),
     Mean_F1_Macro = round(mean(F1_Macro, na.rm = TRUE), 3),
-    Median_F1_Macro = round(median(F1_Macro, na.rm = TRUE), 3)
+    Median_F1_Macro = round(median(F1_Macro, na.rm = TRUE), 3),
+    Mean_Kappa = round(mean(Kappa, na.rm = TRUE), 3),
+    Median_Kappa = round(median(Kappa, na.rm = TRUE), 3)
   ) %>%
   arrange(Group)
 
 print(model_means)
 
 ##############################################################################
-
-# Accuracy boxplot across groups
+# Accuracy boxplot
 ggplot(summary_df %>% distinct(Group, Iteration, Accuracy), 
        aes(x = Group, y = Accuracy)) +
   geom_boxplot(fill = "#69b3a2") +
@@ -71,20 +72,31 @@ ggplot(summary_df %>% distinct(Group, Iteration, Accuracy),
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-
-# F1 boxplot across groups
+# F1 Macro boxplot
 ggplot(summary_df %>% distinct(Group, Iteration, F1_Macro), 
        aes(x = Group, y = F1_Macro)) +
   geom_boxplot(fill = "#69b3a2") +
   labs(title = "Macro F1 by Group Across Iterations",
-       x = "Group", y = "F1_Macro") +
+       x = "Group", y = "F1 Macro") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
-  scale_y_continuous(limits = c(0.5, 1), expand = c(0, 0))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0))
+
+# Kappa boxplot
+ggplot(summary_df %>% distinct(Group, Iteration, Kappa), 
+       aes(x = Group, y = Kappa)) +
+  geom_boxplot(fill = "#f3a683") +
+  labs(title = "Kappa Statistic by Group Across Iterations",
+       x = "Group", y = "Kappa") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0))
 ##############################################################################
 
 # Ensure numeric columns are treated as such
-numeric_cols <- c("Accuracy", "F1_Macro", "F1_FRAMCO", "F1_LITU", "F1_PIEC2", "F1_QUAL")
+numeric_cols <- c("Accuracy", "F1_Macro", "F1_ACSA3C", "F1_CACA38", "F1_CAOV2",
+                  "F1_FAGR", "F1_FRAMCO", "F1_LIST2", "F1_LITU", "F1_PIEC2",
+                  "F1_QUAL", "F1_QURU", "F1_QUSH", "F1_TIAM", "F1_others")
 summary_df[numeric_cols] <- lapply(summary_df[numeric_cols], as.numeric)
 
 # Summarize mean and standard deviation by Group

@@ -92,14 +92,12 @@ for (i in 1:50) {
   cat("\n--- Object-Based Sample", i, "---\n")
   set.seed(50 + i)
   
-  # Count number of canopies per species
   species_counts <- canopy_means %>% count(SpeciesID)
   
-  # Define species groups
   species_12_plus <- species_counts %>% filter(n >= 12) %>% pull(SpeciesID)
   species_6_11 <- species_counts %>% filter(n >= 6 & n < 12) %>% pull(SpeciesID)
   
-  # Sampling species with ≥12 canopies: 8 train, 4 test
+  # Sample 12 canopies per species with >=12
   sampled_12_plus <- canopy_means %>%
     filter(SpeciesID %in% species_12_plus) %>%
     group_by(SpeciesID) %>%
@@ -110,11 +108,10 @@ for (i in 1:50) {
     group_by(SpeciesID) %>%
     slice_sample(n = 8) %>%
     ungroup()
-  
   test_12_plus <- sampled_12_plus %>%
     filter(!TreeID %in% train_12_plus$TreeID)
   
-  # Sampling species with ≥6 and <12 canopies: 4 train, 2 test
+  # Sample 6 canopies per species with 6-11
   sampled_6_11 <- canopy_means %>%
     filter(SpeciesID %in% species_6_11) %>%
     group_by(SpeciesID) %>%
@@ -125,53 +122,54 @@ for (i in 1:50) {
     group_by(SpeciesID) %>%
     slice_sample(n = 4) %>%
     ungroup()
-  
   test_6_11 <- sampled_6_11 %>%
     filter(!TreeID %in% train_6_11$TreeID)
   
-  # Combine train and test sets from both groups
-  train_canopies <- bind_rows(train_12_plus, train_6_11)
-  test_canopies <- bind_rows(test_12_plus, test_6_11)
+  # Rare species <6 canopies
+  rare_species <- canopy_means %>%
+    filter(!(SpeciesID %in% c(species_12_plus, species_6_11)))
   
-  # Species with <6 canopies go to 'others' — take only 1 canopy per species
-  rare_species_test_canopies <- canopy_means %>%
-    filter(!(SpeciesID %in% c(species_12_plus, species_6_11))) %>%
+  # From rare species, select 1 canopy per species for training, relabel as "others"
+  rare_train <- rare_species %>%
     group_by(SpeciesID) %>%
     slice_sample(n = 1) %>%
-    ungroup()
+    ungroup() %>%
+    mutate(SpeciesID = "others")
   
-  test_canopies <- bind_rows(test_canopies, rare_species_test_canopies)
+  # From rare species, select 1 *different* canopy per species for testing, relabel as "others"
+  rare_test <- rare_species %>%
+    filter(!(TreeID %in% rare_train$TreeID)) %>%
+    group_by(SpeciesID) %>%
+    slice_sample(n = 1) %>%
+    ungroup() %>%
+    mutate(SpeciesID = "others")
+  
+  # Final train and test sets
+  train_canopies <- bind_rows(train_12_plus, train_6_11, rare_train)
+  test_canopies <- bind_rows(test_12_plus, test_6_11, rare_test)
   
   train_treeIDs <- train_canopies$TreeID
   test_treeIDs <- test_canopies$TreeID
   
-  # Then continue with your training/testing code as before,
-  # including the "others" relabeling for test data and predictions.
-  
-  # === Full Model ===
+  # Prepare training data - relabeled already
   train_data_full <- train_canopies %>%
     select(SpeciesID, all_of(metrics)) %>%
     drop_na()
+  train_data_full$SpeciesID <- factor(train_data_full$SpeciesID)
   
+  # Prepare testing data - relabeled already
   test_data_full <- test_canopies %>%
     select(SpeciesID, all_of(metrics)) %>%
     drop_na()
+  test_data_full$SpeciesID <- factor(test_data_full$SpeciesID, levels = levels(train_data_full$SpeciesID))
   
-  train_data_full$SpeciesID <- factor(train_data_full$SpeciesID)
-  
-  test_data_full$SpeciesID <- as.character(test_data_full$SpeciesID)
-  
-  train_species <- levels(train_data_full$SpeciesID)
-  
-  test_data_full$SpeciesID[!(test_data_full$SpeciesID %in% train_species)] <- "others"
-  test_data_full$SpeciesID <- factor(test_data_full$SpeciesID, levels = c(train_species, "others"))
-  
+  # Train RF model
   rf_model_full <- randomForest(SpeciesID ~ ., data = train_data_full, ntree = 3000, importance = TRUE)
-  preds_full <- predict(rf_model_full, newdata = test_data_full)
-  preds_full <- as.character(preds_full)
-  preds_full[!(preds_full %in% train_species)] <- "others"
-  preds_full <- factor(preds_full, levels = c(train_species, "others"))
   
+  # Predict on test data
+  preds_full <- predict(rf_model_full, newdata = test_data_full)
+  
+  # Confusion matrix including "others" as a single class
   cm_full <- confusionMatrix(preds_full, test_data_full$SpeciesID)
   
   precision <- cm_full$byClass[, "Precision"]
@@ -186,9 +184,10 @@ for (i in 1:50) {
     f1_by_class = f1_by_class,
     f1_macro = f1_macro
   )
+  
   importance_results[[paste0("Sample_", i)]] <- importance(rf_model_full)
   
-  # === Grouped Models ===
+  # ====== Grouped models ======
   group_iteration_results <- list()
   
   for (group_name in names(model_inputs)) {
@@ -199,26 +198,20 @@ for (i in 1:50) {
       filter(TreeID %in% train_treeIDs) %>%
       select(SpeciesID, all_of(features)) %>%
       drop_na()
+    train_data$SpeciesID <- factor(train_data$SpeciesID)
     
     test_data <- group_means %>%
       filter(TreeID %in% test_treeIDs) %>%
       select(SpeciesID, all_of(features)) %>%
       drop_na()
-    
-    train_data$SpeciesID <- factor(train_data$SpeciesID)
-    test_data$SpeciesID <- as.character(test_data$SpeciesID)
-    
-    train_species <- levels(train_data$SpeciesID)
-    test_data$SpeciesID[!(test_data$SpeciesID %in% train_species)] <- "others"
-    test_data$SpeciesID <- factor(test_data$SpeciesID, levels = c(train_species, "others"))
+    test_data$SpeciesID <- factor(test_data$SpeciesID, levels = levels(train_data$SpeciesID))
     
     rf_group_model <- randomForest(SpeciesID ~ ., data = train_data, ntree = 3000)
+    
     preds_group <- predict(rf_group_model, newdata = test_data)
-    preds_group <- as.character(preds_group)
-    preds_group[!(preds_group %in% train_species)] <- "others"
-    preds_group <- factor(preds_group, levels = c(train_species, "others"))
     
     cm_group <- confusionMatrix(preds_group, test_data$SpeciesID)
+    
     precision <- cm_group$byClass[, "Precision"]
     recall <- cm_group$byClass[, "Recall"]
     f1_by_class <- 2 * (precision * recall) / (precision + recall)
@@ -234,6 +227,7 @@ for (i in 1:50) {
   
   grouped_accuracy_results[[paste0("Sample_", i)]] <- group_iteration_results
 }
+
 beep()
 
 saveRDS(all_results, "E:/Results/Balanaced_Full_RF_results_all_metrics.rds")
