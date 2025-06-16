@@ -51,12 +51,12 @@ print(summary_df)
 model_means <- summary_df %>%
   group_by(Group) %>%
   summarise(
-    Mean_Accuracy = round(mean(Accuracy, na.rm = TRUE), 3),
-    Median_Accuracy = round(median(Accuracy, na.rm = TRUE), 3),
-    Mean_F1_Macro = round(mean(F1_Macro, na.rm = TRUE), 3),
-    Median_F1_Macro = round(median(F1_Macro, na.rm = TRUE), 3),
-    Mean_Kappa = round(mean(Kappa, na.rm = TRUE), 3),
-    Median_Kappa = round(median(Kappa, na.rm = TRUE), 3)
+    Mean_Accuracy = mean(Accuracy, na.rm = TRUE), 3,
+    SD_Accuracy = sd(Accuracy, na.rm = TRUE), 3,
+    Mean_F1_Macro = mean(F1_Macro, na.rm = TRUE), 3,
+    SD_F1_Macro = sd(F1_Macro, na.rm = TRUE), 3,
+    Mean_Kappa = mean(Kappa, na.rm = TRUE), 3,
+    SD_Kappa = sd(Kappa, na.rm = TRUE), 3
   ) %>%
   arrange(Group)
 
@@ -79,8 +79,8 @@ ggplot(summary_df %>% distinct(Group, Iteration, F1_Macro),
   labs(title = "Macro F1 by Group Across Iterations",
        x = "Group", y = "F1 Macro") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_y_continuous(limits = c(0, 1), expand = c(0, 0))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) #+
+  #scale_y_continuous(limits = c(0.2, 1), expand = c(0, 0))
 
 # Kappa boxplot
 ggplot(summary_df %>% distinct(Group, Iteration, Kappa), 
@@ -89,8 +89,7 @@ ggplot(summary_df %>% distinct(Group, Iteration, Kappa),
   labs(title = "Kappa Statistic by Group Across Iterations",
        x = "Group", y = "Kappa") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_y_continuous(limits = c(0, 1), expand = c(0, 0))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ##############################################################################
 
 # Ensure numeric columns are treated as such
@@ -124,3 +123,23 @@ ggplot(f1_long, aes(x = Class, y = F1, fill = Group)) +
   labs(title = "F1 Score by Class and Group", x = "Class", y = "F1 Score") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+########################################################################
+
+# Pivot longer for F1 per class, exclude Macro, and remove specific species
+f1_long <- summary_df %>%
+  pivot_longer(
+    cols = starts_with("F1_") & !starts_with("F1_Macro"),
+    names_to = "Class", values_to = "F1"
+  ) %>%
+  filter(!is.na(F1)) %>%
+  # Remove "F1_" prefix and filter out unwanted species
+  mutate(Class = str_remove(Class, "^F1_")) %>%
+  filter(!Class %in% c("ACSA3C", "FAGR", "QURU", "QUSH", "TIAM"))
+
+# Plot
+ggplot(f1_long, aes(x = Class, y = F1, fill = Group)) +
+  geom_boxplot(outlier.size = 0.5) +
+  labs(title = "F1 Score by Class and Group", x = "Class", y = "F1 Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+

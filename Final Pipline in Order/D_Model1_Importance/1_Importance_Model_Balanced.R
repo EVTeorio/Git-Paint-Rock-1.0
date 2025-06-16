@@ -32,12 +32,7 @@ metrics <- c(
   "PARS", "PRI", "PRICI2", "PRInorm", "PSND", "PSRI", "PSSR", "RDVI", "REPLE", "REPLi",
   "SAVI", "SIPI", "SPVI", "SR", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SRPI",
   "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI",
-  "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4",
-  "PAD_0_5_off", "PAD_10_15_off", "PAD_15_20_off", "PAD_20_25_off", "PAD_25_30_off",
-  "PAD_30_35_off", "PAD_35_40_off", "PAD_5_10_off",
-  "PAD_0_5_on", "PAD_10_15_on", "PAD_15_20_on", "PAD_20_25_on", "PAD_25_30_on",
-  "PAD_30_35_on", "PAD_35_40_on","PAD_5_10_on",
-  "Seasonal_Occupancy_20_35m"
+  "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4"
 )
 
 # Define vegetation indices (VIs)
@@ -53,6 +48,7 @@ vi_vars <- c(
   "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI",
   "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4"
 )
+
 
 # Identify LiDAR variables
 leafon_vars <- c("PAD_0_5_on", "PAD_10_15_on", "PAD_15_20_on", "PAD_20_25_on", "PAD_25_30_on",
@@ -139,9 +135,9 @@ for (i in 1:50) {
   # From rare species, select 1 *different* canopy per species for testing, relabel as "others"
   rare_test <- rare_species %>%
     filter(!(TreeID %in% rare_train$TreeID)) %>%
-    group_by(SpeciesID) %>%
-    slice_sample(n = 1) %>%
-    ungroup() %>%
+    # group_by(SpeciesID) %>%
+    # slice_sample(n = 1) %>%
+    # ungroup() %>%
     mutate(SpeciesID = "others")
   
   # Final train and test sets

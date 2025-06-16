@@ -36,7 +36,7 @@ combine_confusion_matrices <- function(results) {
 combined_cm <- combine_confusion_matrices(Final_grouped_results[["VIs_only"]])
 combined_cm<- combine_confusion_matrices(Final_grouped_results[["VIs_allLiDAR"]])
 
-print(combined_confusion_matrix)
+print(combined_cm)
 #########################################################################
 
 # --- Convert to data frame for plotting ---

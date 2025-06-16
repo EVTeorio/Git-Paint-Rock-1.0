@@ -9,7 +9,7 @@ library(beepr)
 spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit_no_nas.csv")
 
 # Define metric groups
-vi_vars <- c("mNDVI", "NPCI","PSRI","SR7")
+vi_vars <- c("Datt5","NPCI","PSRI","SR7")
 
 leafon_vars <- c("PAD_20_25_on", "PAD_25_30_on", "PAD_30_35_on", "PAD_35_40_on")
 
@@ -75,28 +75,21 @@ for (group_name in names(model_inputs)) {
     test_6_11 <- sampled_6_11 %>%
       filter(!TreeID %in% train_6_11$TreeID)
     
-    # Handle rare species: 1 for training, 1 for test; label all as "others"
+    # Rare species: only include in test set (label as "others")
     rare_canopies <- canopy_means %>%
       filter(SpeciesID %in% rare_species)
     
-    rare_train <- rare_canopies %>%
+    rare_test <- rare_canopies %>%
       group_by(SpeciesID) %>%
       slice_sample(n = 1) %>%
       ungroup() %>%
       mutate(SpeciesID = "others")
     
-    rare_test <- rare_canopies %>%
-      filter(!TreeID %in% rare_train$TreeID) %>%
-      # group_by(SpeciesID) %>%
-      # slice_sample(n = 1) %>%
-      # ungroup() %>%
-      mutate(SpeciesID = "others")
-    
     # Combine training and test sets
-    train_canopies <- bind_rows(train_12_plus, train_6_11, rare_train)
+    train_canopies <- bind_rows(train_12_plus, train_6_11)  # Exclude rare species
     test_canopies <- bind_rows(test_12_plus, test_6_11, rare_test)
     
-    # Prepare training and test data
+    # Prepare data
     train_data <- train_canopies %>%
       select(SpeciesID, all_of(metrics_in_use)) %>%
       drop_na()
@@ -105,10 +98,11 @@ for (group_name in names(model_inputs)) {
       select(SpeciesID, all_of(metrics_in_use)) %>%
       drop_na()
     
+    # Factor levels
     train_data$SpeciesID <- factor(train_data$SpeciesID)
-    test_data$SpeciesID <- factor(test_data$SpeciesID, levels = levels(train_data$SpeciesID))
+    test_data$SpeciesID <- factor(test_data$SpeciesID, levels = union(levels(train_data$SpeciesID), "others"))
     
-    # Train the ranger model
+    # Train random forest
     rf_mod <- ranger(
       SpeciesID ~ .,
       data = train_data,
@@ -123,22 +117,29 @@ for (group_name in names(model_inputs)) {
     pred_class <- colnames(pred_probs)[pred_class_index]
     confidence <- apply(pred_probs, 1, max)
     
-    # Evaluation
+    # Apply confidence threshold: label as "others" if < 0.3
+    pred_class_conf_adj <- ifelse(confidence < .2, "others", pred_class)
+    
+    # Results
     results_df <- data.frame(
       TreeID = test_canopies$TreeID,
       Actual_Class = test_canopies$SpeciesID,
-      Predicted_Class = pred_class,
+      Predicted_Class = pred_class_conf_adj,
       Confidence = confidence
     )
     
-    filtered_results <- results_df %>%
-      filter(Actual_Class %in% levels(train_data$SpeciesID))
+    # Make sure factor levels include "others"
+    results_df$Actual_Class <- factor(results_df$Actual_Class, levels = union(levels(train_data$SpeciesID), "others"))
+    results_df$Predicted_Class <- factor(results_df$Predicted_Class, levels = levels(results_df$Actual_Class))
+    
+    # Filter for evaluation
+    filtered_results <- results_df
     
     accuracy <- mean(filtered_results$Predicted_Class == filtered_results$Actual_Class)
     
     cm <- confusionMatrix(
-      factor(filtered_results$Predicted_Class, levels = levels(train_data$SpeciesID)),
-      factor(filtered_results$Actual_Class, levels = levels(train_data$SpeciesID))
+      filtered_results$Predicted_Class,
+      filtered_results$Actual_Class
     )
     
     kappa_value <- cm$overall["Kappa"]
@@ -148,13 +149,13 @@ for (group_name in names(model_inputs)) {
     f1_scores <- if (is.matrix(per_class_stats)) {
       per_class_stats[, "F1"]
     } else {
-      setNames(per_class_stats["F1"], levels(train_data$SpeciesID))
+      setNames(per_class_stats["F1"], levels(results_df$Actual_Class))
     }
     
     balanced_accuracy_scores <- if (is.matrix(per_class_stats)) {
       per_class_stats[, "Balanced Accuracy"]
     } else {
-      setNames(per_class_stats["Balanced Accuracy"], levels(train_data$SpeciesID))
+      setNames(per_class_stats["Balanced Accuracy"], levels(results_df$Actual_Class))
     }
     
     macro_f1 <- mean(f1_scores, na.rm = TRUE)
@@ -182,7 +183,7 @@ for (group_name in names(model_inputs)) {
   Final_grouped_results[[group_name]] <- group_results
 }
 
+
 beep()
 
 saveRDS(Final_grouped_results, file = "E:/Results/Final_Model.rds")
-
