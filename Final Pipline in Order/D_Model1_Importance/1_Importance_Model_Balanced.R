@@ -13,7 +13,7 @@ spec_chem_canopy <- read.csv("E:/Thesis_Final_Data/ALLmetrics_clean_sunlit_no_na
 beep()
 str(spec_chem_canopy)
 
-
+spec_chem_canopy <- data_clean
 # Get canopy and species info
 canopies <- spec_chem_canopy %>%
   group_by(TreeID) %>%

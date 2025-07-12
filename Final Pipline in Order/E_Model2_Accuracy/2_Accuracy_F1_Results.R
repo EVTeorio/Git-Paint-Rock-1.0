@@ -1,4 +1,6 @@
 
+Final_grouped_results <- readRDS("E:/Results/Final_Model.rds")
+
 summary_list <- list()
 
 # Loop over groups and iterations in Final_grouped_results
@@ -61,6 +63,14 @@ model_means <- summary_df %>%
   arrange(Group)
 
 print(model_means)
+
+# Rename groups based on specified mapping
+summary_df <- summary_df %>%
+  mutate(Group = recode(Group,
+                        "VIs_LiDARleafon" = "VI + leafon_PAD",
+                        "VIs_LiDARleafoff" = "VI + leafoff_PAD",
+                        "VIs_allLiDAR" = "VI + All_PAD"))
+
 
 ##############################################################################
 # Accuracy boxplot

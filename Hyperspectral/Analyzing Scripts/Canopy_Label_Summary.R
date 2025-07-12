@@ -7,7 +7,7 @@ spectral_df <- spec_chem_canopy
 
 # Assuming 'spectral_df' is the dataframe produced by the extract_spectral_data function
 unique_combinations <- spectral_df %>%
-  select(TileNumber, SpeciesID, TreeID) %>%
+  select(TreeID) %>%
   distinct()
 
 # Get the count of individual canopies per SpeciesID (count unique TreeID per SpeciesID)

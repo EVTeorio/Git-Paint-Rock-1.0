@@ -27,7 +27,7 @@ combine_confusion_matrices <- function(results) {
 }
 
 # Combine confusion matrices for the desired model
-combined_cm <- combine_confusion_matrices(Final_grouped_results[["VIs_allLiDAR"]])
+combined_cm <- combine_confusion_matrices(Final_grouped_results[["VIs_only"]])
 
 # --- Compute row totals and prepare labels for y-axis (Actual) ---
 row_totals <- colSums(combined_cm)
@@ -39,14 +39,25 @@ cm_df <- as.data.frame(as.table(cm_percent)) %>%
   rename(Actual = Reference, Predicted = Prediction)
 
 # --- Format percentage labels ---
-cm_df$Label <- sprintf("%.1f%%", cm_df$Freq)
+cm_df$Label <- sprintf("%d%%", round(cm_df$Freq))
 
 # --- Ensure Predicted is in correct order for x-axis (unchanged) ---
-cm_df$Predicted <- factor(cm_df$Predicted, levels = colnames(combined_cm))
+# Reorder levels so "others" is last
+predicted_levels <- colnames(combined_cm)
+if ("others" %in% predicted_levels) {
+  predicted_levels <- c(setdiff(predicted_levels, "others"), "others")
+}
+cm_df$Predicted <- factor(cm_df$Predicted, levels = predicted_levels)
 
-# --- Replace Actual with labeled factor using row totals ---
-label_map <- setNames(actual_labels, rownames(combined_cm))
-cm_df$Actual <- factor(cm_df$Actual, levels = rownames(combined_cm))
+# Reorder so "others" is last in actual (row) labels
+actual_levels <- rownames(combined_cm)
+if ("others" %in% actual_levels) {
+  actual_levels <- c(setdiff(actual_levels, "others"), "others")
+}
+
+# Update label map and factor levels
+label_map <- setNames(paste0(actual_levels, " (n = ", row_totals[actual_levels], ")"), actual_levels)
+cm_df$Actual <- factor(as.character(cm_df$Actual), levels = actual_levels)
 cm_df$Actual <- factor(label_map[as.character(cm_df$Actual)], levels = rev(label_map))
 
 # --- Plot with row totals in y-axis (Actual) labels ---

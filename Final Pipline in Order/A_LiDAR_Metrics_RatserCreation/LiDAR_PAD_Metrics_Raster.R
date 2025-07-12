@@ -108,3 +108,14 @@ plot(raster_stack)
 
 # Optional: Save raster stack to GeoTIFF
 writeRaster(raster_stack, "E:/LeafOn_Rasters/LeafOn_stack.tif", overwrite = TRUE)
+
+
+################################################3
+library(terra)
+
+
+PAD <- rast("D:/LiDAR_Metrics/ALL_Metrics.tif")
+
+
+plot(PAD[[21]])
+

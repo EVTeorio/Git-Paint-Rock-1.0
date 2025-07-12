@@ -13,32 +13,68 @@ library(beepr)
 beep()
 
 # 1. Load the raster file (assuming you have a raster of spectral bands)
-img_path <- "E:/Hyperspec Images/raw_7995_rd_rf_or"
+img_path <- "E:/Thesis_Final_Data/Fusion_VI_ALLmetrics_Images/raw_7995_rd_rf_or_VI_ALLmetrics.envi"
 img <- brick(img_path)
+plot(img)
 
 # 2. Extract spectral values from the raster (assuming bands represent columns of spectral data)
 # Convert raster object to a data frame
 spectral_df <- as.data.frame(img, xy = TRUE)  # Convert to data frame, keeping XY coordinates
-#spectral_data <- spectral_df
-#spectral_data <- justincase
-# justincase <- spectral_df
 
-###Calculate vegetation indices for the pixels(for VegIndex Models)#####
-#tree_image_spectra <- spectral_df
-#trees_image_spectra_df <- speclib_to_df(tree_image_spectra)
-#trees_image_spectra_VIs <- get_vegetation_indices(trees_image_spectra_df, NULL)
+
+spectral_df <- justincase
+
 beep()
+
+#make sure metrics names align
+# Your vector of VI names
+vi_names <- c(
+  "Boochs", "Boochs2", "CARI", "Carter", "Carter2", "Carter3", "Carter4", "Carter5", "Carter6",
+  "CI", "CI2", "ClAInt", "CRI1", "CRI2", "CRI3", "CRI4", "D1", "D2", "Datt", "Datt2", "Datt3",
+  "Datt4", "Datt5", "Datt6", "DD", "DDn", "DPI", "DWSI4", "EGFN", "EGFR", "EVI", "GDVI2",
+  "GDVI3", "GDVI4", "GI", "Gitelson", "Gitelson2", "GMI1", "GMI2", "GreenNDVI", "Maccioni",
+  "MCARI", "MCARIOSAVI", "MCARI2", "MCARI2OSAVI2", "mND705", "mNDVI", "MPRI", "MSAVI", "mSR",
+  "mSR2", "mSR705", "MTCI", "MTVI", "NDVI", "NDVI2", "NDVI3", "NPCI", "OSAVI", "OSAVI2",
+  "PARS", "PRI", "PRICI2", "PRInorm", "PSND", "PSRI", "PSSR", "RDVI", "REPLE", "REPLi",
+  "SAVI", "SIPI", "SPVI", "SR", "SR1", "SR2", "SR3", "SR4", "SR5", "SR6", "SR7", "SR8", "SRPI",
+  "SumDr1", "SumDr2", "TCARI", "TCARIOSAVI", "TCARI2", "TCARI2OSAVI2", "TGI", "TVI",
+  "Vogelmann", "Vogelmann2", "Vogelmann3", "Vogelmann4"
+)
+
+# Get all column names
+col_names <- colnames(spectral_df)
+
+# Identify the columns to rename (those matching the VI pattern)
+vi_cols <- grep("^raw_7995_rd_rf_or_VI_\\d+$", col_names)
+
+# Sanity check: make sure there are 95 matches
+if (length(vi_cols) != length(vi_names)) {
+  stop("Mismatch between number of VI columns and VI names.")
+}
+
+# Replace the column names
+colnames(spectral_df)[vi_cols] <- vi_names
+
+# Define the variable groups
+vi_vars <- c("mNDVI", "NPCI", "PSRI", "SR7")
+leafon_vars <- c("PAD_20_25_on", "PAD_25_30_on", "PAD_30_35_on", "PAD_35_40_on")
+leafoff_vars <- c("PAD_20_25_off", "PAD_25_30_off", "PAD_30_35_off", "PAD_35_40_off")
+seasonal_var <- "Seasonal_Occupancy_20_35m"
+
+# Combine all selected variables into one vector
+selected_vars <- c(vi_vars, leafon_vars, leafoff_vars, seasonal_var)
+
+# Filter the data frame to keep only those columns
+spectral_df <- spectral_df[, selected_vars]
+
+#Extracting RF Model
+RDS <- readRDS("E:/Results/Final_Model.rds")
+# Extract the model from Iteration 1
+rf_mod <- RDS[["VIs_allLiDAR"]][["Iter_1"]]$model
+print(rf_mod)
 
 # Remove the 'x' and 'y' columns from the data (coordinates) since the model doesn't need them
 spectral_df <- spectral_df[, -(1:2)]  # Removing the 'x' and 'y' coordinates
-
-#RF Model required for the following
-# Predict on the testing data
-# Replicate the rows of spec_chem_canopy_n25 to match the number of rows in spectral_df
-spec_chem_canopy_n25_repeated <- spec_chem_canopy[rep(1:nrow(spec_chem_canopy), length.out = nrow(spectral_df)), ]
-
-# Now insert the first 4 columns of the repeated spec_chem_canopy_n25 after the second column of spectral_df
-spectral_df <- cbind(spec_chem_canopy_n25_repeated[, 1:4], spectral_df[, 1:ncol(spectral_df)])
 
 rf_pred_prob <- predict(rf_mod, data = spectral_df)
 
@@ -66,7 +102,7 @@ spectral_df$confidence <- confidence_values
 coords <- as.data.frame(img, xy = TRUE)[, c("x", "y")]
 
 # Convert factor predictions to numeric IDs
-spectral_df$predictions_num <- as.numeric(spectral_df$predictions)  # 1, 2, 3...
+spectral_df$predictions_num <- as.numeric(spectral_df$predictions)  
 
 # Combine with coordinates
 results_df <- cbind(coords, spectral_df[, c("predictions_num", "confidence")])
@@ -102,6 +138,6 @@ legend("right",
 plot(conf_raster, main = "Prediction Confidence")
 
 # Write to disk
-writeRaster(pred_raster, "E:/Git Paint Rock 1.0/Output/Classified_Images/7995_classified_sunlit.tif", format = "GTiff", overwrite = TRUE)
-writeRaster(conf_raster, "E:/Git Paint Rock 1.0/Output/Classified_Images/7995_confidence_sunlit.tif", format = "GTiff", overwrite = TRUE)
+writeRaster(pred_raster, "E:/Git Paint Rock 1.0/Output/Classified_Images/HSI_LiDAR_Classification.tif", format = "GTiff", overwrite = TRUE)
+writeRaster(conf_raster, "E:/Git Paint Rock 1.0/Output/Classified_Images/HSI_LiDAR_Cofidence.tif", format = "GTiff", overwrite = TRUE)
 
